@@ -23,23 +23,16 @@ enum ClassId {
 class BaseEvent
 {
 public:
-    BaseEvent();
-    ~BaseEvent();
-
     unsigned char id() const;
     void set_id(unsigned char id);
 
 private:
     unsigned char id_;
-
 };
 
 class LoginBaseEvent
 {
 public:
-    LoginBaseEvent();
-    ~LoginBaseEvent();
-
     unsigned char id() const;
     void set_id(unsigned char id);
 
@@ -53,15 +46,11 @@ private:
     unsigned char id_;
     std::string userid_;
     std::string passwd_;
-
 };
 
 class LoginReply
 {
 public:
-    LoginReply();
-    ~LoginReply();
-
     unsigned char id() const;
     void set_id(unsigned char id);
 
@@ -75,15 +64,11 @@ private:
     unsigned char id_;
     unsigned int error_;
     unsigned int token_;
-
 };
 
 class SubscriptionBaseEvent
 {
 public:
-    SubscriptionBaseEvent();
-    ~SubscriptionBaseEvent();
-
     unsigned char id() const;
     void set_id(unsigned char id);
 
@@ -97,15 +82,11 @@ private:
     unsigned char id_;
     unsigned int token_;
     std::string userid_;
-
 };
 
 class SubscriptionReply
 {
 public:
-    SubscriptionReply();
-    ~SubscriptionReply();
-
     unsigned char id() const;
     void set_id(unsigned char id);
 
@@ -119,15 +100,11 @@ private:
     unsigned char id_;
     unsigned int error_;
     std::string userid_;
-
 };
 
 class Event
 {
 public:
-    Event();
-    ~Event();
-
     unsigned char id() const;
     void set_id(unsigned char id);
 
@@ -149,15 +126,11 @@ private:
     unsigned int token_;
     std::string userid_;
     std::vector<unsigned char> data_;
-
 };
 
 class EventReply
 {
 public:
-    EventReply();
-    ~EventReply();
-
     unsigned char id() const;
     void set_id(unsigned char id);
 
@@ -175,7 +148,6 @@ private:
     unsigned int error_;
     long long int gid_;
     unsigned int mid_;
-
 };
 
 
