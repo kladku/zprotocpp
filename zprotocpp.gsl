@@ -72,9 +72,6 @@ enum ClassId {
 class $(name:)
 {
 public:
-    $(name:)();
-    ~$(name:)();
-
 .   for class.property
 .   constant_ = (defined(property.extended) & extended = "true") ?? "const " ? ""
 .   reference_ = (defined(property.extended) & extended = "true") ?? "&" ? ""
@@ -86,7 +83,6 @@ private:
 .   for class.property
     $(type:) $(name:c)_;
 .   endfor
-
 };
 
 .endfor
@@ -104,14 +100,6 @@ private:
 #include "$(contract.name).h"
 
 .for contract.class
-$(name:)::$(name:)()
-{
-}
-
-$(name:)::~$(name:)()
-{
-}
-
 .   for class.property
 .   constant_ = (defined(property.extended) & extended = "true") ?? "const " ? ""
 .   reference_ = (defined(property.extended) & extended = "true") ?? "&" ? ""

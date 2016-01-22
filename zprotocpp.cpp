@@ -6,14 +6,6 @@
 
 #include "zprotocpp.h"
 
-BaseEvent::BaseEvent()
-{
-}
-
-BaseEvent::~BaseEvent()
-{
-}
-
 unsigned char BaseEvent::id() const {
     return id_;
 }
@@ -21,14 +13,6 @@ void BaseEvent::set_id(unsigned char id) {
     id_ = id;
 }
 
-
-LoginBaseEvent::LoginBaseEvent()
-{
-}
-
-LoginBaseEvent::~LoginBaseEvent()
-{
-}
 
 unsigned char LoginBaseEvent::id() const {
     return id_;
@@ -52,14 +36,6 @@ void LoginBaseEvent::set_passwd(const std::string &passwd) {
 }
 
 
-LoginReply::LoginReply()
-{
-}
-
-LoginReply::~LoginReply()
-{
-}
-
 unsigned char LoginReply::id() const {
     return id_;
 }
@@ -81,14 +57,6 @@ void LoginReply::set_token(unsigned int token) {
     token_ = token;
 }
 
-
-SubscriptionBaseEvent::SubscriptionBaseEvent()
-{
-}
-
-SubscriptionBaseEvent::~SubscriptionBaseEvent()
-{
-}
 
 unsigned char SubscriptionBaseEvent::id() const {
     return id_;
@@ -112,14 +80,6 @@ void SubscriptionBaseEvent::set_userid(const std::string &userid) {
 }
 
 
-SubscriptionReply::SubscriptionReply()
-{
-}
-
-SubscriptionReply::~SubscriptionReply()
-{
-}
-
 unsigned char SubscriptionReply::id() const {
     return id_;
 }
@@ -141,14 +101,6 @@ void SubscriptionReply::set_userid(std::string userid) {
     userid_ = userid;
 }
 
-
-Event::Event()
-{
-}
-
-Event::~Event()
-{
-}
 
 unsigned char Event::id() const {
     return id_;
@@ -185,14 +137,6 @@ void Event::set_data(const std::vector<unsigned char> &data) {
     data_ = data;
 }
 
-
-EventReply::EventReply()
-{
-}
-
-EventReply::~EventReply()
-{
-}
 
 unsigned char EventReply::id() const {
     return id_;
