@@ -4,27 +4,27 @@
 /**        DO NOT MODIFY         **/
 /**********************************/
 
-#ifndef _CLIENT_PROTO_H_
-#define _CLIENT_PROTO_H_
+#ifndef _ZPROTOCPP_H_
+#define _ZPROTOCPP_H_
 
 #include <string>
 #include <vector>
 
 enum ClassId {
-    Envelope_Class = 1,
-    LoginForm_Class = 2,
+    BaseEvent_Class = 1,
+    LoginBaseEvent_Class = 2,
     LoginReply_Class = 3,
-    SubscriptionForm_Class = 4,
+    SubscriptionBaseEvent_Class = 4,
     SubscriptionReply_Class = 5,
-    Message_Class = 6,
-    MessageReply_Class = 7
+    Event_Class = 6,
+    EventReply_Class = 7
 };
 
-class Envelope
+class BaseEvent
 {
 public:
-    Envelope();
-    ~Envelope();
+    BaseEvent();
+    ~BaseEvent();
 
     unsigned char id() const;
     void set_id(unsigned char id);
@@ -34,31 +34,36 @@ private:
 
 };
 
-class LoginForm
-    : public Envelope
+class LoginBaseEvent
 {
 public:
-    LoginForm();
-    ~LoginForm();
+    LoginBaseEvent();
+    ~LoginBaseEvent();
+
+    unsigned char id() const;
+    void set_id(unsigned char id);
 
     const std::string& userid() const;
-    void set_userid(const std::string& userid);
+    void set_userid(const std::string &userid);
 
     const std::string& passwd() const;
-    void set_passwd(const std::string& passwd);
+    void set_passwd(const std::string &passwd);
 
 private:
+    unsigned char id_;
     std::string userid_;
     std::string passwd_;
 
 };
 
 class LoginReply
-    : public Envelope
 {
 public:
     LoginReply();
     ~LoginReply();
+
+    unsigned char id() const;
+    void set_id(unsigned char id);
 
     unsigned int error() const;
     void set_error(unsigned int error);
@@ -67,36 +72,42 @@ public:
     void set_token(unsigned int token);
 
 private:
+    unsigned char id_;
     unsigned int error_;
     unsigned int token_;
 
 };
 
-class SubscriptionForm
-    : public Envelope
+class SubscriptionBaseEvent
 {
 public:
-    SubscriptionForm();
-    ~SubscriptionForm();
+    SubscriptionBaseEvent();
+    ~SubscriptionBaseEvent();
+
+    unsigned char id() const;
+    void set_id(unsigned char id);
 
     unsigned int token() const;
     void set_token(unsigned int token);
 
     const std::string& userid() const;
-    void set_userid(const std::string& userid);
+    void set_userid(const std::string &userid);
 
 private:
+    unsigned char id_;
     unsigned int token_;
     std::string userid_;
 
 };
 
 class SubscriptionReply
-    : public Envelope
 {
 public:
     SubscriptionReply();
     ~SubscriptionReply();
+
+    unsigned char id() const;
+    void set_id(unsigned char id);
 
     unsigned int error() const;
     void set_error(unsigned int error);
@@ -105,17 +116,20 @@ public:
     void set_userid(std::string userid);
 
 private:
+    unsigned char id_;
     unsigned int error_;
     std::string userid_;
 
 };
 
-class Message
-    : public Envelope
+class Event
 {
 public:
-    Message();
-    ~Message();
+    Event();
+    ~Event();
+
+    unsigned char id() const;
+    void set_id(unsigned char id);
 
     long long int gid() const;
     void set_gid(long long int gid);
@@ -124,12 +138,13 @@ public:
     void set_token(unsigned int token);
 
     const std::string& userid() const;
-    void set_userid(const std::string& userid);
+    void set_userid(const std::string &userid);
 
     const std::vector<unsigned char>& data() const;
-    void set_data(const std::vector<unsigned char>& data);
+    void set_data(const std::vector<unsigned char> &data);
 
 private:
+    unsigned char id_;
     long long int gid_;
     unsigned int token_;
     std::string userid_;
@@ -137,12 +152,14 @@ private:
 
 };
 
-class MessageReply
-    : public Envelope
+class EventReply
 {
 public:
-    MessageReply();
-    ~MessageReply();
+    EventReply();
+    ~EventReply();
+
+    unsigned char id() const;
+    void set_id(unsigned char id);
 
     unsigned int error() const;
     void set_error(unsigned int error);
@@ -154,6 +171,7 @@ public:
     void set_mid(unsigned int mid);
 
 private:
+    unsigned char id_;
     unsigned int error_;
     long long int gid_;
     unsigned int mid_;
@@ -161,5 +179,5 @@ private:
 };
 
 
-#endif // _CLIENT_PROTO_H_
+#endif // _ZPROTOCPP_H_
 

@@ -1,5 +1,6 @@
 .# Include headers
 .template 0
+
 for contract.class
     for class.property
     if defined(property.include)
@@ -22,6 +23,26 @@ for contract.class
     endif
     endfor
 endfor
+
+function resolve_inheritance (class)
+    if defined (my.class.inherits)
+        first_property = my.class->property
+        for contract.class as super where name = my.class.inherits
+            resolve_inheritance (super)
+            for property where count (my.class.property, name = -1.name) = 0
+                echo "Copying $(property.name:) into $(my.class.name:)"
+                copy property to my.class before first_property
+            endfor
+        else
+            echo "E: super $(inherits:) isn't defined"
+        endfor
+    endif
+endfunction
+
+for class
+    resolve_inheritance (class)
+endfor
+
 .endtemplate
 
 .# Generate header file
@@ -49,9 +70,6 @@ enum ClassId {
 
 .for contract.class
 class $(name:)
-.   if defined (class.inherits)
-    : public $(class.inherits:)
-.   endif
 {
 public:
     $(name:)();
@@ -77,6 +95,12 @@ private:
 
 .# Generate source file
 .output "$(contract.name).cpp"
+/**********************************/
+/**           WARNING!           **/
+/** This file is auto generated. **/
+/**        DO NOT MODIFY         **/
+/**********************************/
+
 #include "$(contract.name).h"
 
 .for contract.class
@@ -95,7 +119,7 @@ $(constant_)$(type:)$(reference_) $(class.name:)::$(name:c)() const {
 void $(class.name:)::set_$(name:c)($(constant_)$(type:) $(reference_)$(name:c)) {
     $(name:c)_ = $(name:c);
 }
-*/
+
 .   endfor
 
 .endfor
