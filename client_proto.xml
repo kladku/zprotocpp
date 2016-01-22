@@ -1,0 +1,47 @@
+<contract name = "client_proto" script = "client_proto">
+<!-- Transport -->
+<class name = "Envelope">
+    <property name = "id"  type = "unsigned char" key = "true"/>
+</class>
+
+<!-- Control -->
+<class name = "LoginForm" inherits = "Envelope">
+    <property name = "userid" type = "std::string" include = "string" extended = "true"/>
+    <property name = "passwd" type = "std::string" include = "string" extended = "true"/>
+</class>
+<class name = "LoginReply" inherits = "Envelope">
+    <property name = "error" type = "unsigned int"/>
+    <property name = "token" type = "unsigned int"/>
+</class>
+<class name = "SubscriptionForm" inherits = "Envelope">
+    <property name = "token" type = "unsigned int"/>
+    <property name = "userid" type = "std::string" include = "string" extended = "true"/>
+</class>
+<class name = "SubscriptionReply" inherits = "Envelope">
+    <property name = "error" type = "unsigned int"/>
+    <property name = "userid" type = "std::string" include = "string"/>
+</class>
+
+<!-- Exchange -->
+<class name = "Message" inherits = "Envelope">
+    <property name = "gid" type = "long long int"/>
+    <property name = "token" type = "unsigned int"/>
+    <property name = "userid" type = "std::string" include = "string" extended = "true"/>
+    <property name = "data" type = "std::vector<unsigned char>" include = "vector" extended = "true"/>
+<!--    <property name = "data" type = "MessageData" extended = "true"/>-->
+</class>
+<class name = "MessageReply" inherits = "Envelope">
+    <property name = "error" type = "unsigned int"/>
+    <property name = "gid" type = "long long int"/>
+    <property name = "mid" type = "unsigned int"/>
+</class>
+
+<!-- Data -->
+<!--<class name = "MessageData">
+    <property name = "type" type = "unsigned int"/>
+</class>
+<class name = "TextData" inherits = "MessageData">
+    <atribute name = "type" value = "eTextData"/>
+    <property name = "text" type = "std::string" include = "string"/>
+</class>-->
+</contract>

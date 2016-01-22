@@ -1,0 +1,101 @@
+.# Include headers
+.template 0
+for contract.class
+    for class.property
+    if defined(property.include)
+        if count (contract.header, name = "$(include:)") = 0
+            new contract.header
+                echo "Including <$(include:)> header"
+                header.name = "$(include:)"
+            endnew
+        endif
+    endif
+    # Move incomplete classes after class declaration that are missing
+    # This should use a more complex algorithm, but for now it's enough
+    if defined(property.extended) & extended = "true"
+        extended_type = "$(type:)"
+        incomplete_class = class
+        for contract.class where class.name = extended_type
+            echo "Moving $(incomplete_class.name:) after $(class.name:)"
+            move incomplete_class after class
+        endfor
+    endif
+    endfor
+endfor
+.endtemplate
+
+.# Generate header file
+.output "$(contract.name).h"
+/**********************************/
+/**           WARNING!           **/
+/** This file is auto generated. **/
+/**        DO NOT MODIFY         **/
+/**********************************/
+
+#ifndef _$(contract.NAME)_H_
+#define _$(contract.NAME)_H_
+
+.# Include needed headers
+.for contract.header
+#include <$(header.name)>
+.endfor
+
+enum ClassId {
+.for contract.class
+.   class.comma = last()?? ""? ","
+    $(name:)_Class = $(index ())$(comma)
+.endfor
+};
+
+.for contract.class
+class $(name:)
+.   if defined (class.inherits)
+    : public $(class.inherits:)
+.   endif
+{
+public:
+    $(name:)();
+    ~$(name:)();
+
+.   for class.property
+.   constant_ = (defined(property.extended) & extended = "true") ?? "const " ? ""
+.   reference_ = (defined(property.extended) & extended = "true") ?? "&" ? ""
+    $(constant_)$(type:)$(reference_) $(name:c)() const;
+    void set_$(name:c)($(constant_)$(type:) $(reference_)$(name:c));
+
+.   endfor
+private:
+.   for class.property
+    $(type:) $(name:c)_;
+.   endfor
+
+};
+
+.endfor
+
+#endif // _$(contract.NAME)_H_
+
+.# Generate source file
+.output "$(contract.name).cpp"
+#include "$(contract.name).h"
+
+.for contract.class
+$(name:)::$(name:)()
+{
+}
+
+$(name:)::~$(name:)()
+{
+}
+
+.   for class.property
+$(constant_)$(type:)$(reference_) $(class.name:)::$(name:c)() const {
+    return $(name:c)_;
+}
+void $(class.name:)::set_$(name:c)($(constant_)$(type:) $(reference_)$(name:c)) {
+    $(name:c)_ = $(name:c);
+}
+*/
+.   endfor
+
+.endfor
