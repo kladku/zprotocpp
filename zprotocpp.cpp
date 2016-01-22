@@ -37,17 +37,17 @@ void LoginBaseEvent::set_id(unsigned char id) {
     id_ = id;
 }
 
-std::string LoginBaseEvent::userid() const {
+const std::string& LoginBaseEvent::userid() const {
     return userid_;
 }
-void LoginBaseEvent::set_userid(std::string userid) {
+void LoginBaseEvent::set_userid(const std::string &userid) {
     userid_ = userid;
 }
 
-std::string LoginBaseEvent::passwd() const {
+const std::string& LoginBaseEvent::passwd() const {
     return passwd_;
 }
-void LoginBaseEvent::set_passwd(std::string passwd) {
+void LoginBaseEvent::set_passwd(const std::string &passwd) {
     passwd_ = passwd;
 }
 
@@ -104,10 +104,10 @@ void SubscriptionBaseEvent::set_token(unsigned int token) {
     token_ = token;
 }
 
-std::string SubscriptionBaseEvent::userid() const {
+const std::string& SubscriptionBaseEvent::userid() const {
     return userid_;
 }
-void SubscriptionBaseEvent::set_userid(std::string userid) {
+void SubscriptionBaseEvent::set_userid(const std::string &userid) {
     userid_ = userid;
 }
 
@@ -171,17 +171,17 @@ void Event::set_token(unsigned int token) {
     token_ = token;
 }
 
-std::string Event::userid() const {
+const std::string& Event::userid() const {
     return userid_;
 }
-void Event::set_userid(std::string userid) {
+void Event::set_userid(const std::string &userid) {
     userid_ = userid;
 }
 
-std::vector<unsigned char> Event::data() const {
+const std::vector<unsigned char>& Event::data() const {
     return data_;
 }
-void Event::set_data(std::vector<unsigned char> data) {
+void Event::set_data(const std::vector<unsigned char> &data) {
     data_ = data;
 }
 
@@ -221,5 +221,6 @@ unsigned int EventReply::mid() const {
 void EventReply::set_mid(unsigned int mid) {
     mid_ = mid;
 }
+
 
 
