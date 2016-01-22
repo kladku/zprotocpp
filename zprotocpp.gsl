@@ -126,3 +126,46 @@ void $(class.name:)::set_$(name:c)($(constant_)$(type:) $(reference_)$(name:c)) 
 
 .endfor
 
+.output "main.cpp"
+/**********************************/
+/**           WARNING!           **/
+/** This file is auto generated. **/
+/**        DO NOT MODIFY         **/
+/**********************************/
+
+#include "$(contract.name).h"
+#include <iostream>
+
+int main()
+{
+    std::cout << "TEST $(contract.name:)\\n";
+.for contract.class
+    {
+        std::cout << "Testing Class $(name:)\\n";
+        $(name:no,block) $(name:c);
+.   for class.property
+        std::cout << "Testing property $(name:c)\\n";
+.       if ("$(type:)" = "unsigned int") | ("$(type:)" = "unsigned char") | ("$(type:)" = "long long int")
+        $(type:) $(name) = 42;
+.       endif
+.       if "$(type:)" = "std::string"
+        $(type:) $(name) = "sample string";
+.       endif
+.       if "$(type:)" = "std::vector<unsigned char>"
+        $(type:) $(name) = { 4, 2, 3 };
+.       endif
+        $(class.name:c).set_$(name:c)($(name));
+.       if "$(type:)" <> "std::vector<unsigned char>"
+        std::cout << "Expected: " << $(name)
+               << "\\nReturned:   " << $(class.name:c).$(name:c)();
+.       endif
+        if($(class.name:c).$(name:c)() == $(name))
+            std::cout << "\\nPASS\\n";
+        else
+            std::cout << "FAIL\\n";
+.   endfor
+    }
+.endfor
+
+    return 0;
+}
