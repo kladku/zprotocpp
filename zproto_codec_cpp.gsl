@@ -147,40 +147,94 @@ class Msg$(message.name:Pascal)
 public:
 .   for message.field
 .   if type = "number" & !defined (field.value)
+    // Get & Set $(name)
 .   if ctype = "byte"
-    uint8_t $(name)() const;                     //  Get $(name:left,block)
-    void set_$(name)(uint8_t name);              //  Set $(name:left,block)
+    uint8_t $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(uint8_t $(name)) {
+        $(name)_ = $(name);
+    }
 .   else
-    $(ctype) $(name)() const;                    //  Get $(name:left,block)
-    void set_$(name)($(ctype) name);             //  Set $(name:left,block)
+    $(ctype) $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)($(ctype) $(name)) {
+        $(name)_ = $(name);
+    }
 .   endif
 .   elsif type = "octets"
-    std::array<uint8_t, $(size)>& $(name)() const; //  Get $(name:left,block)
-    void set_$(name)(const std::array<uint8_t, $(size)>& name); //  Set $(name:left,block)
+    // Get & Set $(name)
+    std::array<uint8_t, $(size)>& $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(const std::array<uint8_t, $(size)>& $(name)) {
+        $(name)_ = $(name);
+    }
 .   elsif type = "string" & !defined (field.value)
-    std::array<char, 256>& $(name)() const;      //  Get $(name:left,block)
-    void set_$(name)(const std::array<char, 256>& name); //  Set $(name:left,block)
+    // Get & Set $(name)
+    std::array<char, 256>& $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(const std::array<char, 256>& $(name)) {
+        $(name)_ = $(name);
+    }
 .   elsif type = "longstr"
-    std::string& $(name)() const;                //  Get $(name:left,block)
-    void set_$(name)(const std::string& name);   //  Set $(name:left,block)
+    // Get & Set $(name)
+    std::string& $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(const std::string& $(name)) {
+        $(name)_ = $(name);
+    }
 .   elsif type = "strings"
-    std::vector<std::string>& $(name)() const;   //  Get $(name:left,block)
-    void set_$(name)(const std::vector<std::string>& name); //  Set $(name:left,block)
+    // Get & Set $(name)
+    std::vector<std::string>& $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(const std::vector<std::string>& $(name)) {
+        $(name)_ = $(name);
+    }
 .   elsif type = "hash"
-    std::unordered_map<std::string, std::string>& $(name)() const; //  Get $(name:left,block)  
-    void set_$(name)(const std::unordered_map<std::string, std::string>& name); //  Set $(name:left,block)
+    // Get & Set $(name)
+    std::unordered_map<std::string, std::string>& $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(const std::unordered_map<std::string, std::string>& $(name)) {
+        $(name)_ = $(name);
+    }
 .   elsif type = "uuid"
-    std::array<uint8_t, 16>& $(name)() const;    //  Get $(name:left,block) 
-    void set_$(name)(const std::array<uint8_t, 16>& name); //  Set $(name:left,block)
+    // Get & Set $(name)
+    std::array<uint8_t, 16>& $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(const std::array<uint8_t, 16>& $(name)) {
+        $(name)_ = $(name);
+    }
 .   elsif type = "chunk"
-    std::vector<uint8_t>& $(name)() const;       //  Get $(name:left,block) 
-    void set_$(name)(const std::vector<uint8_t>& name); //  Set $(name:left,block)
+    // Get & Set $(name)
+    std::vector<uint8_t>& $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(const std::vector<uint8_t>& $(name)) {
+        $(name)_ = $(name);
+    }
 .   elsif type = "frame"
-    frame& $(name)() const;                      //  Get $(name:left,block) 
-    void set_$(name)(const frame& name);         //  Set $(name:left,block)
+    // Get & Set $(name)
+    frame& $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(const frame& $(name)) {
+        $(name)_ = $(name);
+    }
 .   elsif type = "msg"
-    frames& $(name)() const;                     //  Get $(name:left,block)
-    void set_$(name)(const frames& name);        //  Set $(name:left,block)
+    // Get & Set $(name)
+    frames& $(name)() const {
+        return $(name)_;
+    }
+    void set_$(name)(const frames& $(name)) {
+        $(name)_ = $(name);
+    }
 .   endif
 .   endfor
 
