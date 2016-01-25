@@ -42,6 +42,9 @@ public:
         : needle_(static_cast<uint8_t*>(msg.data()))
     {}
 
+    template<typename T, std::size_t N>
+    friend buffer& operator<<(buffer &b, const std::array<T,N> &host);
+
     template<typename T>
     friend buffer& operator<<(buffer &b, const T &host);
 
@@ -51,6 +54,24 @@ public:
 private:
     uint8_t *needle_;
 };
+
+template<typename T, std::size_t N>
+buffer& operator<<(buffer &b, const std::array<T,N> &host)
+{
+    static_assert(sizeof(uint8_t), sizeof(T));
+    std::copy(std::begin(host), std::end(host), b.needle_);
+    b.needle_ += N;
+}
+
+template<typename T>
+buffer& operator<<(buffer &b, const T &host)
+{
+    static_assert(sizeof(uint8_t), sizeof(T));
+    buffer << static_cast<uint32_t>(host.size());
+    b.needle_ + 4;
+    std::copy(std::begin(host), std::end(host), b.needle_);
+    b.needle_ += host.size();
+}
 
 template<>
 buffeer& operator<uint8_t><<(buffer &b, const uint8_t &host)
@@ -92,17 +113,23 @@ buffeer& operator<uint64_t><<(buffer &b, const uint64_t &host)
 }
 
 template<>
-buffer& operator<<<std::vector<uint8_t>>(buffer &b, const std::vector<uint8_t> &host)
+buffer& operator<<<std::vector<std::string>>(buffer &b, const std::vector<uint8_t> &host)
 {
-    std::copy(std::begin(host), std::end(host), b.needle_);
-    b.needle_ += host.size();
+    buffer << static_cast<uint32_t>(host.size());
+    for (const auto &s : hosts)
+        buffer << s;
 }
 
-template<typename T, size_t N>
-buffer& operator<<(buffer &b, T(&host)[N])
+template<>
+buffer& operator<<<std::unordered_map<std::string, std::string>>(buffer &b, const std::vector<uint8_t> &host)
 {
-    std::copy(std::begin(host), std::end(host), b.needle_);
-    b.needle_ += N;
+    buffer << static_cast<uint32_t>(host.size());
+    for (const auto &s : hosts) {
+        buffer << static_cast<uint8_t>(s.first.size());
+        buffer << s.first;
+        buffer << static_cast<uint32_t>(s.second.size());
+        buffer << s.second;
+    }
 }
 
 .for class.message
@@ -157,9 +184,9 @@ private:
     $(ctype) $(name)_;                    //  $(string.trim (field.)?name:left,block)
 .   endif
 .   elsif type = "octets"
-    uint8_t $(name)_[$(size)];            //  $(string.trim (field.)?name:left,block)
+    std::array<uint8_t, $(size)> $(name)_;      //  $(string.trim (field.)?name:left,block)
 .   elsif type = "string" & !defined (field.value)
-    char $(name)_[256];                   //  $(string.trim (field.)?name:left,block)
+    std::array<char, 256> $(name)_;       //  $(string.trim (field.)?name:left,block)
 .   elsif type = "longstr"
     std::string $(name)_;                 //  $(string.trim (field.)?name:left,block)
 .   elsif type = "strings"
@@ -167,7 +194,7 @@ private:
 .   elsif type = "hash"
     std::unordered_map<std::string, std::string> $(name)_;         //  $(string.trim (field.)?name:left,block)
 .   elsif type = "uuid"
-    uint8_t $(name)_[16];                 //  $(string.trim (field.)?name:left,block)
+    std::array<uint8_t, 16> $(name)_;     //  $(string.trim (field.)?name:left,block)
 .   elsif type = "chunk"
     std::vector<uint8_t> $(name)_;        //  $(string.trim (field.)?name:left,block)
 .   elsif type = "frame"
@@ -187,7 +214,7 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
 .   elsif type = "octets"
     frame_size += $(size);      // $(name)
 .   elsif type = "string"
-    frame_size += 1 + std::strlen(m.$(name)_); // $(name)
+    frame_size += 1 + m.$(name)_.size(); // $(name)
 .   elsif type = "longstr"
     frame_size += 4 + m.$(name)_.size(); // $(name)
 .   elsif type = "strings"
