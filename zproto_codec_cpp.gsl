@@ -34,6 +34,8 @@ set_defaults ()
 
 #include <zmq.hpp>
 #include <unordered_map>
+#include <array>
+#include <vector>
 
 using frame = zmq::message_t;
 using frames = std::vector<frame>;
@@ -224,6 +226,8 @@ private:
     frames $(name)_;                      //  $(string.trim (field.)?name:left,block)
 .   endif
 .   endfor
+    
+    friend frames& operator<<(frames&,const Msg$(message.name:Pascal) &);
 };
 
 frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
@@ -259,28 +263,25 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
 .   endif
 .   endfor
 
-    frame f(frame_size);
-    buffer b(f);
+    frame new_frame(frame_size);
+    buffer b(new_frame);
 .   for message.field
 .   if type <> "msg" & type <> "frame"
-    b << $(name)_;
+    b << m.$(name)_;
 .   endif
 .   endfor
-    frames.emplace_back(frame);
-
+    frames.push_back(new_frame);
 .   for message.field
 .   if type = "frame"
-    frames.push_back($(name)_);
+    frames.push_back(m.$(name)_);
 .   endif
 .   endfor
-
 .   for message.field
 .   if type = "msg"
-    for (auto &f : $(name)_)
+    for (auto &f : m.$(name)_)
         frames.push_back(f);
 .   endif
 .   endfor
-
     return frames;
 }
 
