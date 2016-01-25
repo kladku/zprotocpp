@@ -158,7 +158,7 @@ public:
     }
 .   endif
 .   elsif type = "string"
-    std::array<char, 256>& $(name)() const {
+    const char* $(name)() const {
         return $(name)_;
     }
 .   endif
@@ -184,7 +184,7 @@ public:
 .   endif
 .   elsif type = "octets"
     // Get & Set $(name)
-    std::array<uint8_t, $(size)>& $(name)() const {
+    const std::array<uint8_t, $(size)>& $(name)() const {
         return $(name)_;
     }
     void set_$(name)(const std::array<uint8_t, $(size)>& $(name)) {
@@ -192,7 +192,7 @@ public:
     }
 .   elsif type = "string" & !defined (field.value)
     // Get & Set $(name)
-    std::array<char, 256>& $(name)() const {
+    const std::array<char, 256>& $(name)() const {
         return $(name)_;
     }
     void set_$(name)(const std::array<char, 256>& $(name)) {
@@ -200,7 +200,7 @@ public:
     }
 .   elsif type = "longstr"
     // Get & Set $(name)
-    std::string& $(name)() const {
+    const std::string& $(name)() const {
         return $(name)_;
     }
     void set_$(name)(const std::string& $(name)) {
@@ -208,7 +208,7 @@ public:
     }
 .   elsif type = "strings"
     // Get & Set $(name)
-    std::vector<std::string>& $(name)() const {
+    const std::vector<std::string>& $(name)() const {
         return $(name)_;
     }
     void set_$(name)(const std::vector<std::string>& $(name)) {
@@ -216,7 +216,7 @@ public:
     }
 .   elsif type = "hash"
     // Get & Set $(name)
-    std::unordered_map<std::string, std::string>& $(name)() const {
+    const std::unordered_map<std::string, std::string>& $(name)() const {
         return $(name)_;
     }
     void set_$(name)(const std::unordered_map<std::string, std::string>& $(name)) {
@@ -224,7 +224,7 @@ public:
     }
 .   elsif type = "uuid"
     // Get & Set $(name)
-    std::array<uint8_t, 16>& $(name)() const {
+    const std::array<uint8_t, 16>& $(name)() const {
         return $(name)_;
     }
     void set_$(name)(const std::array<uint8_t, 16>& $(name)) {
@@ -232,7 +232,7 @@ public:
     }
 .   elsif type = "chunk"
     // Get & Set $(name)
-    std::vector<uint8_t>& $(name)() const {
+    const std::vector<uint8_t>& $(name)() const {
         return $(name)_;
     }
     void set_$(name)(const std::vector<uint8_t>& $(name)) {
@@ -240,7 +240,7 @@ public:
     }
 .   elsif type = "frame"
     // Get & Set $(name)
-    frame& $(name)() const {
+    const frame& $(name)() const {
         return $(name)_;
     }
     void set_$(name)(const frame& $(name)) {
@@ -248,7 +248,7 @@ public:
     }
 .   elsif type = "msg"
     // Get & Set $(name)
-    frames& $(name)() const {
+    const frames& $(name)() const {
         return $(name)_;
     }
     void set_$(name)(const frames& $(name)) {
@@ -258,6 +258,19 @@ public:
 .   endfor
 
 private:
+.   for message.field where defined (value)
+    // Get $(name)
+.   if type = "number"
+.   if ctype = "byte"
+    const uint8_t $(name)_ = $(value);
+.   else
+    const $(ctype) $(name)_ = $(value);
+.   endif
+.   elsif type = "string"
+    const char host_[256] = u8"$(value)";
+.   endif
+.   endfor
+
 .   for message.field
 .   if type = "number" & !defined (field.value)
 .   if ctype = "byte"
