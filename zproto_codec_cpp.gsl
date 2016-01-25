@@ -1,0 +1,178 @@
+.template 0
+
+include "zproto_lib.gsl"
+include "zproto_bnf.gsl"
+resolve_includes ()
+expand_headers ()
+generate_bnf ()
+set_defaults ()
+.endtemplate
+.output "$(class.package_dir)/$(class.name).h"
+
+/*  =========================================================================
+    $(class.name) - $(class.title:)
+
+    Codec header for $(class.name).
+
+    ** WARNING *************************************************************
+    THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose
+    your changes at the next build cycle. This is great for temporary printf
+    statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places
+    for commits are:
+
+     * The XML model used for this code generation: $(filename), or
+     * The code generation script that built this file: $(script)
+    ************************************************************************
+.   for class.license
+    $(string.trim (license.):block                                         )
+.   endfor
+    =========================================================================
+*/
+
+#ifndef $(CLASS.NAME)_H_INCLUDED
+#define $(CLASS.NAME)_H_INCLUDED
+
+using frame = zmq::message_t;
+using frames = std::vector<frame>;
+
+class buffer
+{
+public:
+    buffer(zmq::message_t &msg)
+        : needle_(static_cast<uint8_t*>(msg.data()))
+    {}
+
+    template<typename T>
+    friend buffer& operator<<(buffer &b, const T &host);
+
+    template<typename T, size_t N>
+    friend buffer& operator<<(buffer &b, T(&host)[N]);
+
+private:
+    uint8_t *needle_;
+};
+
+template<>
+buffeer& operator<uint8_t><<(buffer &b, const uint8_t &host)
+{
+    *needle_ = host;
+    ++needle_;
+}
+
+template<>
+buffeer& operator<uint16_t><<(buffer &b, const uint16_t &host)
+{
+    needle_[0] = (uint8_t)((host >> 8) & 0xFF);
+    needle_[1] = (uint8_t)((host)      & 0xFF);
+    needle_ += 2;
+}
+
+template<>
+buffeer& operator<uint32_t><<(buffer &b, const uint32_t &host)
+{
+    needle_[0] = (uint8_t)((host >> 24) & 0xFF);
+    needle_[1] = (uint8_t)((host >> 16) & 0xFF);
+    needle_[2] = (uint8_t)((host >>  8) & 0xFF);
+    needle_[3] = (uint8_t)((host)       & 0xFF);
+    needle_ += 4;
+}
+
+template<>
+buffeer& operator<uint64_t><<(buffer &b, const uint64_t &host)
+{
+    needle_[0] = (uint8_t)((host >> 56) & 0xFF);
+    needle_[1] = (uint8_t)((host >> 48) & 0xFF);
+    needle_[2] = (uint8_t)((host >> 40) & 0xFF);
+    needle_[3] = (uint8_t)((host >> 32) & 0xFF);
+    needle_[4] = (uint8_t)((host >> 24) & 0xFF);
+    needle_[5] = (uint8_t)((host >> 16) & 0xFF);
+    needle_[6] = (uint8_t)((host >>  8) & 0xFF);
+    needle_[7] = (uint8_t)((host)       & 0xFF);
+    needle_ += 8;
+}
+
+template<>
+buffer& operator<<<std::vector<uint8_t>>(buffer &b, const std::vector<uint8_t> &host)
+{
+    std::copy(std::begin(host), std::end(host), b.needle_);
+    b.needle_ += host.size();
+}
+
+template<typename T, size_t N>
+buffer& operator<<(buffer &b, T(&host)[N])
+{
+    std::copy(std::begin(host), std::end(host), b.needle_);
+    b.needle_ += N;
+}
+
+.for class.message
+class Msg$(message.name:Pascal)
+{
+private:
+.   for message.field
+.   if type = "number" & !defined (field.value)
+.   if ctype = "byte"
+    uint8_t $(name)_;                     //  $(string.trim (field.)?name:left,block)
+.   else 
+    $(ctype) $(name)_;                    //  $(string.trim (field.)?name:left,block)
+.   endif
+.   elsif type = "octets"
+    uint8_t $(name)_[$(size)];            //  $(string.trim (field.)?name:left,block)
+.   elsif type = "string" & !defined (field.value)
+    char $(name)_[256];                   //  $(string.trim (field.)?name:left,block)
+.   elsif type = "longstr"
+    std::string $(name)_;                 //  $(string.trim (field.)?name:left,block)
+.   elsif type = "strings"
+    std::vector<std::string> $(name)_;    //  $(string.trim (field.)?name:left,block)
+.   elsif type = "hash"
+    std::unordered_map<std::string, std::string> $(name)_;         //  $(string.trim (field.)?name:left,block)
+.   elsif type = "uuid"
+    uint8_t $(name)_[16];                 //  $(string.trim (field.)?name:left,block)
+.   elsif type = "chunk"
+    std::vector<uint8_t> $(name)_;        //  $(string.trim (field.)?name:left,block)
+.   elsif type = "frame"
+    frame $(name)_;                       //  $(string.trim (field.)?name:left,block)
+.   elsif type = "msg"
+    frames $(name)_;                      //  $(string.trim (field.)?name:left,block)
+.   endif
+.   endfor
+};
+
+frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
+{
+    size_t frame_size = 0;
+.   for message.field
+.   if type = "number" 
+    frame_size += $(size);      // $(name)
+.   elsif type = "octets"
+    frame_size += $(size);      // $(name)
+.   elsif type = "string"
+    frame_size += 1 + std::strlen(m.$(name)_); // $(name)
+.   elsif type = "longstr"
+    frame_size += 4 + m.$(name)_.size(); // $(name)
+.   elsif type = "strings"
+    frame_size += 4;            // $(name)
+    for (const auto &s : m.$(name)_)
+        frame_size += 4 + s.size();
+.   elsif type = "hash"
+    frame_size += 4;            // $(name)
+    for (const auto &p : m.$(name)_)
+        frame_size += 1 + p.first.size() + 4 + p.second.size();
+.   elsif type = "uuid"
+    frame_size += 16;           // $(name)
+.   elsif type = "chunk"
+    frame_size += 4 + m.$(name)_.size();  // $(name)
+.   elsif type = "frame"
+.   elsif type = "msg"
+.       class.msg = name
+.       if item () <> count (message.field)
+.           echo "E: in $(message.name:), $(field.name) must come last"
+.       endif
+.   endif
+.   endfor
+    frame f(frame_size);
+}
+
+.endfor
+
+#endif
