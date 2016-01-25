@@ -108,6 +108,46 @@ buffer& operator<<(buffer &b, T(&host)[N])
 .for class.message
 class Msg$(message.name:Pascal)
 {
+public:
+.   for message.field
+.   if type = "number" & !defined (field.value)
+.   if ctype = "byte"
+    uint8_t $(name)() const;                     //  Get $(name:left,block)
+    void set_$(name)(uint8_t name);              //  Set $(name:left,block)
+.   else
+    $(ctype) $(name)() const;                    //  Get $(name:left,block)
+    void set_$(name)($(ctype) name);             //  Set $(name:left,block)
+.   endif
+.   elsif type = "octets"
+    std::array<uint8_t, $(size)>& $(name)() const; //  Get $(name:left,block)
+    void set_$(name)(const std::array<uint8_t, $(size)>& name); //  Set $(name:left,block)
+.   elsif type = "string" & !defined (field.value)
+    std::array<char, 256>& $(name)() const;      //  Get $(name:left,block)
+    void set_$(name)(const std::array<char, 256>& name); //  Set $(name:left,block)
+.   elsif type = "longstr"
+    std::string& $(name)() const;                //  Get $(name:left,block)
+    void set_$(name)(const std::string& name);   //  Set $(name:left,block)
+.   elsif type = "strings"
+    std::vector<std::string>& $(name)() const;   //  Get $(name:left,block)
+    void set_$(name)(const std::vector<std::string>& name); //  Set $(name:left,block)
+.   elsif type = "hash"
+    std::unordered_map<std::string, std::string>& $(name)() const; //  Get $(name:left,block)  
+    void set_$(name)(const std::unordered_map<std::string, std::string>& name); //  Set $(name:left,block)
+.   elsif type = "uuid"
+    std::array<uint8_t, 16>& $(name)() const;    //  Get $(name:left,block) 
+    void set_$(name)(const std::array<uint8_t, 16>& name); //  Set $(name:left,block)
+.   elsif type = "chunk"
+    std::vector<uint8_t>& $(name)() const;       //  Get $(name:left,block) 
+    void set_$(name)(const std::vector<uint8_t>& name); //  Set $(name:left,block)
+.   elsif type = "frame"
+    frame& $(name)() const;                      //  Get $(name:left,block) 
+    void set_$(name)(const frame& name);         //  Set $(name:left,block)
+.   elsif type = "msg"
+    frames& $(name)() const;                     //  Get $(name:left,block)
+    void set_$(name)(const frames& name);        //  Set $(name:left,block)
+.   endif
+.   endfor
+
 private:
 .   for message.field
 .   if type = "number" & !defined (field.value)
