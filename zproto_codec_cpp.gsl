@@ -131,16 +131,16 @@ public:
     std::vector<std::string>& $(name)() const;   //  Get $(name:left,block)
     void set_$(name)(const std::vector<std::string>& name); //  Set $(name:left,block)
 .   elsif type = "hash"
-    std::unordered_map<std::string, std::string>& $(name)() const; //  Get $(name:left,block)  
+    std::unordered_map<std::string, std::string>& $(name)() const; //  Get $(name:left,block)
     void set_$(name)(const std::unordered_map<std::string, std::string>& name); //  Set $(name:left,block)
 .   elsif type = "uuid"
-    std::array<uint8_t, 16>& $(name)() const;    //  Get $(name:left,block) 
+    std::array<uint8_t, 16>& $(name)() const;    //  Get $(name:left,block)
     void set_$(name)(const std::array<uint8_t, 16>& name); //  Set $(name:left,block)
 .   elsif type = "chunk"
-    std::vector<uint8_t>& $(name)() const;       //  Get $(name:left,block) 
+    std::vector<uint8_t>& $(name)() const;       //  Get $(name:left,block)
     void set_$(name)(const std::vector<uint8_t>& name); //  Set $(name:left,block)
 .   elsif type = "frame"
-    frame& $(name)() const;                      //  Get $(name:left,block) 
+    frame& $(name)() const;                      //  Get $(name:left,block)
     void set_$(name)(const frame& name);         //  Set $(name:left,block)
 .   elsif type = "msg"
     frames& $(name)() const;                     //  Get $(name:left,block)
