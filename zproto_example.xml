@@ -2,8 +2,8 @@
     name = "zproto_example"
     signature = "0"
     title = "zproto example protocol"
-    script = "zproto_codec_c"
-    package_dir = "../include"
+    script = "zproto_codec_cpp"
+    package_dir = "."
     source_dir = "."
     >
 This is an example protocol designed to teach you how this stuff works.
