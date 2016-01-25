@@ -63,7 +63,7 @@ private:
 template<typename T>
 buffer& operator<<(buffer &b, const T &host)
 {
-    static_assert(sizeof(uint8_t) == sizeof(T), "Expected byte size");
+    static_assert(sizeof(typename T::value_type) == 1, "Expected byte size");
     b << static_cast<uint32_t>(host.size());
     b.needle_ += 4;
     std::copy(std::begin(host), std::end(host), b.needle_);
@@ -139,7 +139,7 @@ buffer& operator<<(buffer &b, const std::unordered_map<std::string, std::string>
 template<typename T, std::size_t N>
 buffer& operator<<(buffer &b, const std::array<T,N> &host)
 {
-    static_assert(sizeof(uint8_t) == sizeof(T), "Expected byte size");
+    static_assert(sizeof(typename T::value_type) == 1, "Expected byte size");
     std::copy(std::begin(host), std::end(host), b.needle_);
     b.needle_ += N;
     return b;
@@ -258,7 +258,7 @@ public:
         return $(name)_;
     }
     void set_$(name)(const frame& $(name)) {
-        $(name)_ = $(name);
+        $(name)_.rebuild($(name).data(), $(name).size());
     }
 .   elsif type = "msg"
     // Get & Set $(name)
@@ -266,7 +266,9 @@ public:
         return $(name)_;
     }
     void set_$(name)(const frames& $(name)) {
-        $(name)_ = $(name);
+        $(name)_.clear();
+        for (const auto &f : $(name))
+            $(name)_.emplace_back(frame(f.data(), f.size()));
     }
 .   endif
 .   endfor
@@ -356,19 +358,19 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
     b << m.$(name)_;
 .   endif
 .   endfor
-    frames.push_back(new_frame);
+    f.emplace_back(std::move(new_frame));
 .   for message.field
 .   if type = "frame"
-    frames.push_back(m.$(name)_);
+    f.emplace_back(frame(m.$(name)_.data(), m.$(name)_.size()));
 .   endif
 .   endfor
 .   for message.field
 .   if type = "msg"
-    for (auto &f : m.$(name)_)
-        frames.push_back(f);
+    for (auto &mf : m.$(name)_)
+        f.emplace_back(frame(mf.data(), mf.size()));
 .   endif
 .   endfor
-    return frames;
+    return f;
 }
 
 .endfor
