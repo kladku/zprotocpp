@@ -145,6 +145,25 @@ buffer& operator<<(buffer &b, const std::array<char,256> &host)
 class Msg$(message.name:Pascal)
 {
 public:
+.   for message.field where defined (value)
+    // Get $(name)
+.   if type = "number"
+.   if ctype = "byte"
+    uint8_t $(name)() const {
+        return $(name)_;
+    }
+.   else
+    $(ctype) $(name)() const {
+        return $(name)_;
+    }
+.   endif
+.   elsif type = "string"
+    std::array<char, 256>& $(name)() const {
+        return $(name)_;
+    }
+.   endif
+.   endfor
+
 .   for message.field
 .   if type = "number" & !defined (field.value)
     // Get & Set $(name)
