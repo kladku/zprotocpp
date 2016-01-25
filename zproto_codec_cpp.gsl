@@ -214,7 +214,7 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
 .   elsif type = "octets"
     frame_size += $(size);      // $(name)
 .   elsif type = "string"
-    frame_size += 1 + m.$(name)_.size(); // $(name)
+    frame_size += 1 + strlen(m.$(name)_.data()); // $(name)
 .   elsif type = "longstr"
     frame_size += 4 + m.$(name)_.size(); // $(name)
 .   elsif type = "strings"
