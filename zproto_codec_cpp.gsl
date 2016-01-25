@@ -55,19 +55,11 @@ private:
     uint8_t *needle_;
 };
 
-template<typename T, std::size_t N>
-buffer& operator<<(buffer &b, const std::array<T,N> &host)
-{
-    static_assert(sizeof(uint8_t), sizeof(T));
-    std::copy(std::begin(host), std::end(host), b.needle_);
-    b.needle_ += N;
-}
-
 template<typename T>
 buffer& operator<<(buffer &b, const T &host)
 {
     static_assert(sizeof(uint8_t), sizeof(T));
-    buffer << static_cast<uint32_t>(host.size());
+    b << static_cast<uint32_t>(host.size());
     b.needle_ + 4;
     std::copy(std::begin(host), std::end(host), b.needle_);
     b.needle_ += host.size();
@@ -76,60 +68,77 @@ buffer& operator<<(buffer &b, const T &host)
 template<>
 buffeer& operator<uint8_t><<(buffer &b, const uint8_t &host)
 {
-    *needle_ = host;
-    ++needle_;
+    *b.needle_ = host;
+    ++b.needle_;
 }
 
 template<>
-buffeer& operator<uint16_t><<(buffer &b, const uint16_t &host)
+buffer& operator<uint16_t><<(buffer &b, const uint16_t &host)
 {
-    needle_[0] = (uint8_t)((host >> 8) & 0xFF);
-    needle_[1] = (uint8_t)((host)      & 0xFF);
-    needle_ += 2;
+    b.needle_[0] = (uint8_t)((host >> 8) & 0xFF);
+    b.needle_[1] = (uint8_t)((host)      & 0xFF);
+    b.needle_ += 2;
 }
 
 template<>
-buffeer& operator<uint32_t><<(buffer &b, const uint32_t &host)
+buffer& operator<uint32_t><<(buffer &b, const uint32_t &host)
 {
-    needle_[0] = (uint8_t)((host >> 24) & 0xFF);
-    needle_[1] = (uint8_t)((host >> 16) & 0xFF);
-    needle_[2] = (uint8_t)((host >>  8) & 0xFF);
-    needle_[3] = (uint8_t)((host)       & 0xFF);
-    needle_ += 4;
+    b.needle_[0] = (uint8_t)((host >> 24) & 0xFF);
+    b.needle_[1] = (uint8_t)((host >> 16) & 0xFF);
+    b.needle_[2] = (uint8_t)((host >>  8) & 0xFF);
+    b.needle_[3] = (uint8_t)((host)       & 0xFF);
+    b.needle_ += 4;
 }
 
 template<>
-buffeer& operator<uint64_t><<(buffer &b, const uint64_t &host)
+buffer& operator<uint64_t><<(buffer &b, const uint64_t &host)
 {
-    needle_[0] = (uint8_t)((host >> 56) & 0xFF);
-    needle_[1] = (uint8_t)((host >> 48) & 0xFF);
-    needle_[2] = (uint8_t)((host >> 40) & 0xFF);
-    needle_[3] = (uint8_t)((host >> 32) & 0xFF);
-    needle_[4] = (uint8_t)((host >> 24) & 0xFF);
-    needle_[5] = (uint8_t)((host >> 16) & 0xFF);
-    needle_[6] = (uint8_t)((host >>  8) & 0xFF);
-    needle_[7] = (uint8_t)((host)       & 0xFF);
-    needle_ += 8;
+    b.needle_[0] = (uint8_t)((host >> 56) & 0xFF);
+    b.needle_[1] = (uint8_t)((host >> 48) & 0xFF);
+    b.needle_[2] = (uint8_t)((host >> 40) & 0xFF);
+    b.needle_[3] = (uint8_t)((host >> 32) & 0xFF);
+    b.needle_[4] = (uint8_t)((host >> 24) & 0xFF);
+    b.needle_[5] = (uint8_t)((host >> 16) & 0xFF);
+    b.needle_[6] = (uint8_t)((host >>  8) & 0xFF);
+    b.needle_[7] = (uint8_t)((host)       & 0xFF);
+    b.needle_ += 8;
 }
 
 template<>
 buffer& operator<<<std::vector<std::string>>(buffer &b, const std::vector<uint8_t> &host)
 {
-    buffer << static_cast<uint32_t>(host.size());
+    b << static_cast<uint32_t>(host.size());
     for (const auto &s : hosts)
-        buffer << s;
+        b << s;
 }
 
 template<>
 buffer& operator<<<std::unordered_map<std::string, std::string>>(buffer &b, const std::vector<uint8_t> &host)
 {
-    buffer << static_cast<uint32_t>(host.size());
+    b << static_cast<uint32_t>(host.size());
     for (const auto &s : hosts) {
-        buffer << static_cast<uint8_t>(s.first.size());
-        buffer << s.first;
-        buffer << static_cast<uint32_t>(s.second.size());
-        buffer << s.second;
+        b << static_cast<uint8_t>(s.first.size());
+        b << s.first;
+        b << static_cast<uint32_t>(s.second.size());
+        b << s.second;
     }
+}
+
+template<typename T, std::size_t N>
+buffer& operator<<(buffer &b, const std::array<T,N> &host)
+{
+    static_assert(sizeof(uint8_t), sizeof(T));
+    std::copy(std::begin(host), std::end(host), b.needle_);
+    b.needle_ += N;
+}
+
+template<>
+buffer& operator<<(buffer &b, const std::array<char,256> &host)
+{
+    std::size_t size = std::strlen(host.data());
+    b << (uint8_t)size;
+    std::copy(std::begin(host), std::next(std::begin(host), size), b.needle_);
+    b.needle_ += size;
 }
 
 .for class.message
@@ -214,7 +223,7 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
 .   elsif type = "octets"
     frame_size += $(size);      // $(name)
 .   elsif type = "string"
-    frame_size += 1 + m.$(name)_.size(); // $(name)
+    frame_size += 1 + std::strlen(m.$(name)_.data()); // $(name)
 .   elsif type = "longstr"
     frame_size += 4 + m.$(name)_.size(); // $(name)
 .   elsif type = "strings"
