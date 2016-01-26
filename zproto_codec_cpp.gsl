@@ -139,7 +139,7 @@ buffer& operator<<(buffer &b, const std::unordered_map<std::string, std::string>
 template<typename T, std::size_t N>
 buffer& operator<<(buffer &b, const std::array<T,N> &host)
 {
-    static_assert(sizeof(typename T::value_type) == 1, "Expected byte size");
+    static_assert(sizeof(T) == 1, "Expected byte size");
     std::copy(std::begin(host), std::end(host), b.needle_);
     b.needle_ += N;
     return b;
