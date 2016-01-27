@@ -205,7 +205,7 @@ public:
     bool is_valid() const {
         return is_valid_;
     }
-    bool set_is_valid(bool is_valid) {
+    void set_is_valid(bool is_valid) {
         is_valid_ = is_valid;
     }
 
@@ -291,19 +291,14 @@ private:
     uint64_t time_;                       //  Log date/time
     std::array<char, 256> host_;          //  Originating hostname
     std::string data_;                    //  Actual log message
-
-    friend frames& operator<<(frames&,const MsgLog &);
+    
+    friend frames& operator<<(frames &, const MsgLog &);
+    friend frames& operator>>(frames &, MsgLog &)
 };
 
 frames& operator<<(frames &f, const MsgLog &m)
 {
-    OnScopeExit(
-        [&m]() {
-            if (!m.is_valid())
-            std::cout << "MsgLog with id: "
-                      << m.id() << "is not valid!";
-    });
-    size_t frame_size = 0;
+    size_t frame_size += 2 + 1;        // signature + message id
     frame_size += 2;            // sequence
     frame_size += 2;            // version
     frame_size += 1;            // level
@@ -315,8 +310,10 @@ frames& operator<<(frames &f, const MsgLog &m)
     frame_size += 1 + std::strlen(m.const_host_); // const_host
     frame_size += 4 + m.data_.size(); // data
 
-    frame new_frame(frame_size);
-    buffer b(new_frame);
+    frame content(frame_size);
+    buffer b(content);
+    b << (uint16_t)(0xAAA0 | 0);
+    b << (uint8_t)m.id();
     b << m.sequence_;
     b << m.version_;
     b << m.level_;
@@ -327,11 +324,51 @@ frames& operator<<(frames &f, const MsgLog &m)
     b << m.host_;
     b << m.const_host_;
     b << m.data_;
-    f.emplace_back(std::move(new_frame));
-    m.set_is_valid(true);
+    f.emplace_back(std::move(content));
     return f;
 }
 
+frames& operator>>(const frames &f, MsgLog &m)
+{
+    OnScopeExit(
+        [&m]() {
+            if (!m.is_valid())
+            std::cout << "MsgLog with id: "
+                      << m.id() << "is not valid!";
+    });
+    size_t frame_size += 2 + 1;        // signature + message id
+    if (f.empty())
+        return;
+    const frame &content = f[0];
+    buffer b(content);
+    uint16_t signature;
+    b >> signature;
+    if (signature != (0xAAA0 | 0)) {
+        //zsys_warning ("zproto_example: invalid signature");
+        //goto malformed;         //  Interrupted
+        return;
+    }
+    uint8_t id;
+    b >> id;
+    if (id != m.id()) {
+        //log 
+        return;
+    }
+    b >> m.sequence_;
+    b >> m.version_;
+    b >> m.level_;
+    b >> m.event_;
+    b >> m.node_;
+    b >> m.peer_;
+    b >> m.time_;
+    b >> m.host_;
+    b >> m.const_host_;
+    b >> m.data_;
+    size_t frame_no = 0;
+    size_t msg_no = 0;
+    m.set_is_valid(true);
+    return f;
+}
 class MsgStructures
 {
 public:
@@ -342,7 +379,7 @@ public:
     bool is_valid() const {
         return is_valid_;
     }
-    bool set_is_valid(bool is_valid) {
+    void set_is_valid(bool is_valid) {
         is_valid_ = is_valid;
     }
 
@@ -376,19 +413,14 @@ private:
     uint16_t sequence_;                   //  sequence
     std::vector<std::string> aliases_;    //  List of strings
     std::unordered_map<std::string, std::string> headers_;         //  Other random properties
-
-    friend frames& operator<<(frames&,const MsgStructures &);
+    
+    friend frames& operator<<(frames &, const MsgStructures &);
+    friend frames& operator>>(frames &, MsgStructures &)
 };
 
 frames& operator<<(frames &f, const MsgStructures &m)
 {
-    OnScopeExit(
-        [&m]() {
-            if (!m.is_valid())
-            std::cout << "MsgStructures with id: "
-                      << m.id() << "is not valid!";
-    });
-    size_t frame_size = 0;
+    size_t frame_size += 2 + 1;        // signature + message id
     frame_size += 2;            // sequence
     frame_size += 4;            // aliases
     for (const auto &s : m.aliases_)
@@ -397,16 +429,51 @@ frames& operator<<(frames &f, const MsgStructures &m)
     for (const auto &p : m.headers_)
         frame_size += 1 + p.first.size() + 4 + p.second.size();
 
-    frame new_frame(frame_size);
-    buffer b(new_frame);
+    frame content(frame_size);
+    buffer b(content);
+    b << (uint16_t)(0xAAA0 | 0);
+    b << (uint8_t)m.id();
     b << m.sequence_;
     b << m.aliases_;
     b << m.headers_;
-    f.emplace_back(std::move(new_frame));
-    m.set_is_valid(true);
+    f.emplace_back(std::move(content));
     return f;
 }
 
+frames& operator>>(const frames &f, MsgStructures &m)
+{
+    OnScopeExit(
+        [&m]() {
+            if (!m.is_valid())
+            std::cout << "MsgStructures with id: "
+                      << m.id() << "is not valid!";
+    });
+    size_t frame_size += 2 + 1;        // signature + message id
+    if (f.empty())
+        return;
+    const frame &content = f[0];
+    buffer b(content);
+    uint16_t signature;
+    b >> signature;
+    if (signature != (0xAAA0 | 0)) {
+        //zsys_warning ("zproto_example: invalid signature");
+        //goto malformed;         //  Interrupted
+        return;
+    }
+    uint8_t id;
+    b >> id;
+    if (id != m.id()) {
+        //log 
+        return;
+    }
+    b >> m.sequence_;
+    b >> m.aliases_;
+    b >> m.headers_;
+    size_t frame_no = 0;
+    size_t msg_no = 0;
+    m.set_is_valid(true);
+    return f;
+}
 class MsgBinary
 {
 public:
@@ -417,7 +484,7 @@ public:
     bool is_valid() const {
         return is_valid_;
     }
-    bool set_is_valid(bool is_valid) {
+    void set_is_valid(bool is_valid) {
         is_valid_ = is_valid;
     }
 
@@ -477,11 +544,35 @@ private:
     std::array<uint8_t, 16> identifier_;  //  Unique identity
     frame address_;                       //  Return address as frame
     frames content_;                      //  Message to be delivered
-
-    friend frames& operator<<(frames&,const MsgBinary &);
+    
+    friend frames& operator<<(frames &, const MsgBinary &);
+    friend frames& operator>>(frames &, MsgBinary &)
 };
 
 frames& operator<<(frames &f, const MsgBinary &m)
+{
+    size_t frame_size += 2 + 1;        // signature + message id
+    frame_size += 2;            // sequence
+    frame_size += 4;            // flags
+    frame_size += 4 + m.public_key_.size();  // public_key
+    frame_size += 16;           // identifier
+
+    frame content(frame_size);
+    buffer b(content);
+    b << (uint16_t)(0xAAA0 | 0);
+    b << (uint8_t)m.id();
+    b << m.sequence_;
+    b << m.flags_;
+    b << m.public_key_;
+    b << m.identifier_;
+    f.emplace_back(std::move(content));
+    f.emplace_back(frame(m.address_.data(), m.address_.size()));
+    for (auto &mf : m.content_)
+        f.emplace_back(frame(mf.data(), mf.size()));
+    return f;
+}
+
+frames& operator>>(const frames &f, MsgBinary &m)
 {
     OnScopeExit(
         [&m]() {
@@ -489,26 +580,37 @@ frames& operator<<(frames &f, const MsgBinary &m)
             std::cout << "MsgBinary with id: "
                       << m.id() << "is not valid!";
     });
-    size_t frame_size = 0;
-    frame_size += 2;            // sequence
-    frame_size += 4;            // flags
-    frame_size += 4 + m.public_key_.size();  // public_key
-    frame_size += 16;           // identifier
-
-    frame new_frame(frame_size);
-    buffer b(new_frame);
-    b << m.sequence_;
-    b << m.flags_;
-    b << m.public_key_;
-    b << m.identifier_;
-    f.emplace_back(std::move(new_frame));
-    f.emplace_back(frame(m.address_.data(), m.address_.size()));
-    for (auto &mf : m.content_)
-        f.emplace_back(frame(mf.data(), mf.size()));
+    size_t frame_size += 2 + 1;        // signature + message id
+    if (f.empty())
+        return;
+    const frame &content = f[0];
+    buffer b(content);
+    uint16_t signature;
+    b >> signature;
+    if (signature != (0xAAA0 | 0)) {
+        //zsys_warning ("zproto_example: invalid signature");
+        //goto malformed;         //  Interrupted
+        return;
+    }
+    uint8_t id;
+    b >> id;
+    if (id != m.id()) {
+        //log 
+        return;
+    }
+    b >> m.sequence_;
+    b >> m.flags_;
+    b >> m.public_key_;
+    b >> m.identifier_;
+    size_t frame_no = 0;
+    if (++frame_no < f.size())
+        m.address_.rebuild(f[frame_no].data(), f[frame_no].size());
+    size_t msg_no = 0;
+    for (size_t msg_no = 0; frame_no < f.size(); ++frame_no, ++msg_no)
+        m.content_[msg_no].rebuild(f[frame_no].data(), f[frame_no].size());
     m.set_is_valid(true);
     return f;
 }
-
 class MsgTypes
 {
 public:
@@ -519,7 +621,7 @@ public:
     bool is_valid() const {
         return is_valid_;
     }
-    bool set_is_valid(bool is_valid) {
+    void set_is_valid(bool is_valid) {
         is_valid_ = is_valid;
     }
 
@@ -601,19 +703,14 @@ private:
     std::array<char, 256> supplier_surname_;  //  Family name
     std::array<char, 256> supplier_mobile_;  //  Mobile phone number
     std::array<char, 256> supplier_email_;  //  Email address
-
-    friend frames& operator<<(frames&,const MsgTypes &);
+    
+    friend frames& operator<<(frames &, const MsgTypes &);
+    friend frames& operator>>(frames &, MsgTypes &)
 };
 
 frames& operator<<(frames &f, const MsgTypes &m)
 {
-    OnScopeExit(
-        [&m]() {
-            if (!m.is_valid())
-            std::cout << "MsgTypes with id: "
-                      << m.id() << "is not valid!";
-    });
-    size_t frame_size = 0;
+    size_t frame_size += 2 + 1;        // signature + message id
     frame_size += 2;            // sequence
     frame_size += 1 + std::strlen(m.client_forename_.data()); // client_forename
     frame_size += 1 + std::strlen(m.client_surname_.data()); // client_surname
@@ -624,8 +721,10 @@ frames& operator<<(frames &f, const MsgTypes &m)
     frame_size += 1 + std::strlen(m.supplier_mobile_.data()); // supplier_mobile
     frame_size += 1 + std::strlen(m.supplier_email_.data()); // supplier_email
 
-    frame new_frame(frame_size);
-    buffer b(new_frame);
+    frame content(frame_size);
+    buffer b(content);
+    b << (uint16_t)(0xAAA0 | 0);
+    b << (uint8_t)m.id();
     b << m.sequence_;
     b << m.client_forename_;
     b << m.client_surname_;
@@ -635,10 +734,49 @@ frames& operator<<(frames &f, const MsgTypes &m)
     b << m.supplier_surname_;
     b << m.supplier_mobile_;
     b << m.supplier_email_;
-    f.emplace_back(std::move(new_frame));
-    m.set_is_valid(true);
+    f.emplace_back(std::move(content));
     return f;
 }
 
+frames& operator>>(const frames &f, MsgTypes &m)
+{
+    OnScopeExit(
+        [&m]() {
+            if (!m.is_valid())
+            std::cout << "MsgTypes with id: "
+                      << m.id() << "is not valid!";
+    });
+    size_t frame_size += 2 + 1;        // signature + message id
+    if (f.empty())
+        return;
+    const frame &content = f[0];
+    buffer b(content);
+    uint16_t signature;
+    b >> signature;
+    if (signature != (0xAAA0 | 0)) {
+        //zsys_warning ("zproto_example: invalid signature");
+        //goto malformed;         //  Interrupted
+        return;
+    }
+    uint8_t id;
+    b >> id;
+    if (id != m.id()) {
+        //log 
+        return;
+    }
+    b >> m.sequence_;
+    b >> m.client_forename_;
+    b >> m.client_surname_;
+    b >> m.client_mobile_;
+    b >> m.client_email_;
+    b >> m.supplier_forename_;
+    b >> m.supplier_surname_;
+    b >> m.supplier_mobile_;
+    b >> m.supplier_email_;
+    size_t frame_no = 0;
+    size_t msg_no = 0;
+    m.set_is_valid(true);
+    return f;
+}
 
 #endif

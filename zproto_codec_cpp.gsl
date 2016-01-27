@@ -203,7 +203,7 @@ public:
     bool is_valid() const {
         return is_valid_;
     }
-    bool set_is_valid(bool is_valid) {
+    void set_is_valid(bool is_valid) {
         is_valid_ = is_valid;
     }
 
