@@ -85,6 +85,10 @@ OK, let's see some meat.
         Originating hostname
         <test>localhost</test>
     </field>
+    <field name = "const_host" type = "string" value = "some test data">
+        Originating hostname
+        <test>localhost</test>
+    </field>
     <field name = "data" type = "longstr">
         Actual log message
         <test>This is the message to log</test>
