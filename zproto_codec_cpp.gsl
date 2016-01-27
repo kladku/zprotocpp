@@ -53,8 +53,8 @@ public:
     template<typename T>
     friend buffer& operator<<(buffer &b, const T &host);
 
-    template<typename T, size_t N>
-    friend buffer& operator<<(buffer &b, T(&host)[N]);
+    template<typename T>
+    friend buffer& operator<<(buffer &b, const T *host);
 
 private:
     uint8_t *needle_;
@@ -151,6 +151,16 @@ buffer& operator<<(buffer &b, const std::array<char,256> &host)
     std::size_t size = std::strlen(host.data());
     b << (uint8_t)size;
     std::copy(std::begin(host), std::next(std::begin(host), size), b.needle_);
+    b.needle_ += size;
+    return b;
+}
+
+template<>
+buffer& operator<<(buffer &b, const char* host)
+{
+    std::size_t size = std::strlen(host);
+    b << (uint8_t)size;
+    memcpy(b.needle_, host, size);
     b.needle_ += size;
     return b;
 }
@@ -342,7 +352,11 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
 .   elsif type = "octets"
     frame_size += $(size);      // $(name)
 .   elsif type = "string"
+.   if !defined (field.value)
     frame_size += 1 + std::strlen(m.$(name)_.data()); // $(name)
+.   else
+    frame_size += 1 + std::strlen(m.$(name)_); // $(name)
+.   endif
 .   elsif type = "longstr"
     frame_size += 4 + m.$(name)_.size(); // $(name)
 .   elsif type = "strings"
