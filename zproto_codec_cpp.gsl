@@ -152,10 +152,25 @@ buffer& operator<<(buffer &b, const std::array<char,256> &host)
     return b;
 }
 
+enum MessageId : uint8_t {
+.for class.message
+.   if defined (message.id)
+.       message.comma = last() ?? "" ? ","
+    $(NAME:c)_MESSAGE = $(message.id)$(comma)
+.   else
+.       echo "E: required attribute 'id' not defined in $(class.name)"
+.   endif
+.endfor
+};
+
 .for class.message
 class Msg$(message.name:Pascal)
 {
 public:
+    MessageId id() const {
+        return $(NAME:c)_MESSAGE;
+    }
+
 .   for message.field where defined (value)
     // Get $(name)
 .   if type = "number"
@@ -280,7 +295,7 @@ private:
     const $(ctype) $(name)_ = $(value);
 .   endif
 .   elsif type = "string"
-    const char host_[256] = u8"$(value)";
+    const char $(name)_[256] = u8"$(value)";
 .   endif
 .   endfor
 
@@ -288,7 +303,7 @@ private:
 .   if type = "number" & !defined (field.value)
 .   if ctype = "byte"
     uint8_t $(name)_;                     //  $(string.trim (field.)?name:left,block)
-.   else 
+.   else
     $(ctype) $(name)_;                    //  $(string.trim (field.)?name:left,block)
 .   endif
 .   elsif type = "octets"
@@ -320,7 +335,7 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
 {
     size_t frame_size += 2 + 1;        // signature + message id
 .   for message.field
-.   if type = "number" 
+.   if type = "number"
     frame_size += $(size);      // $(name)
 .   elsif type = "octets"
     frame_size += $(size);      // $(name)
