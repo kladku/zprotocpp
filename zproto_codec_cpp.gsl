@@ -339,13 +339,14 @@ private:
     frames $(name)_;                      //  $(string.trim (field.)?name:left,block)
 .   endif
 .   endfor
-
-    friend frames& operator<<(frames&,const Msg$(message.name:Pascal) &);
+    
+    friend frames& operator<<(frames &, const Msg$(message.name:Pascal) &);
+    friend frames& operator>>(frames &, Msg$(message.name:Pascal) &)
 };
 
 frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
 {
-    size_t frame_size = 0;
+    size_t frame_size += 2 + 1;        // signature + message id
 .   for message.field
 .   if type = "number"
     frame_size += $(size);      // $(name)
@@ -380,14 +381,16 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
 .   endif
 .   endfor
 
-    frame new_frame(frame_size);
-    buffer b(new_frame);
+    frame content(frame_size);
+    buffer b(content);
+    b << (uint16_t)(0xAAA0 | $(class.signature));
+    b << (uint8_t)m.id();
 .   for message.field
 .   if type <> "msg" & type <> "frame"
     b << m.$(name)_;
 .   endif
 .   endfor
-    f.emplace_back(std::move(new_frame));
+    f.emplace_back(std::move(content));
 .   for message.field
 .   if type = "frame"
     f.emplace_back(frame(m.$(name)_.data(), m.$(name)_.size()));
@@ -402,6 +405,47 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
     return f;
 }
 
+frames& operator>>(const frames &f, Msg$(message.name:Pascal) &m)
+{
+    size_t frame_size += 2 + 1;        // signature + message id
+    if (f.empty())
+        return;
+    const frame &content = f[0];
+    buffer b(content);
+    uint16_t signature;
+    b >> signature;
+    if (signature != (0xAAA0 | $(class.signature))) {
+        //zsys_warning ("$(class.name): invalid signature");
+        //goto malformed;         //  Interrupted
+        return;
+    }
+    uint8_t id;
+    b >> id;
+    if (id != m.id()) {
+        //log 
+        return;
+    }
+.   for message.field
+.   if type <> "msg" & type <> "frame"
+    b >> m.$(name)_;
+.   endif
+.   endfor
+    size_t frame_no = 0;
+.   for message.field
+.   if type = "frame"
+    if (++frame_no < f.size())
+        m.$(name)_.rebuild(f[frame_no].data(), f[frame_no].size());
+.   endif
+.   endfor
+    size_t msg_no = 0;
+.   for message.field
+.   if type = "msg"
+    for (size_t msg_no = 0; frame_no < f.size(); ++frame_no, ++msg_no)
+        m.$(name)_[msg_no].rebuild(f[frame_no].data(), f[frame_no].size());
+.   endif
+.   endfor
+    return f;
+}
 .endfor
 
 #endif
