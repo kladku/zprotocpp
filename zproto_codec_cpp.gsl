@@ -56,6 +56,9 @@ public:
     template<typename T>
     friend buffer& operator<<(buffer &b, const T *host);
 
+    template<typename T>
+    friend buffer& operator>>(buffer &b, T &host);
+
 private:
     uint8_t *needle_;
 };
@@ -71,6 +74,12 @@ buffer& operator<<(buffer &b, const T &host)
     return b;
 }
 
+template<typename T>
+buffer& operator>>(buffer &b, T &host)
+{
+    static_assert(sizeof(typename T::value_type) == 1, "Expected byte size");
+}
+
 template<>
 buffer& operator<<<uint8_t>(buffer &b, const uint8_t &host)
 {
@@ -80,10 +89,27 @@ buffer& operator<<<uint8_t>(buffer &b, const uint8_t &host)
 }
 
 template<>
+buffer& operator>><uint8_t>(buffer &b, uint8_t &host)
+{
+    host = *b.needle_;
+    ++b.needle_;
+    return b;
+}
+
+template<>
 buffer& operator<<<uint16_t>(buffer &b, const uint16_t &host)
 {
     b.needle_[0] = (uint8_t)((host >> 8) & 0xFF);
     b.needle_[1] = (uint8_t)((host)      & 0xFF);
+    b.needle_ += 2;
+    return b;
+}
+
+template<>
+buffer& operator>><uint16_t>(buffer &b, uint16_t &host)
+{
+    host = (uint16_t)(b.needle[0] << 8);
+    host |= (uint16_t)(b.needle[1] & 0xFF);
     b.needle_ += 2;
     return b;
 }
