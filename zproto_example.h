@@ -62,8 +62,12 @@ public:
     template<typename T>
     friend buffer& operator<<(buffer &b, const T &host);
 
+    template<typename T, std::size_t N>
+    friend bool operator>>(buffer &b, const std::array<T,N> &host);
+
     template<typename T>
     friend bool operator>>(buffer &b, T &host);
+    
 
 private:
     uint8_t *needle_;
@@ -82,7 +86,7 @@ buffer& operator<<(buffer &b, const T &host)
 
 
 template<>
-buffer& operator<<<uint8_t>(buffer &b, const uint8_t &host)
+buffer& operator<<(buffer &b, const uint8_t &host)
 {
     *b.needle_ = host;
     ++b.needle_;
@@ -90,7 +94,7 @@ buffer& operator<<<uint8_t>(buffer &b, const uint8_t &host)
 }
 
 template<>
-bool operator>><uint8_t>(buffer &b, uint8_t &host)
+bool operator>>(buffer &b, uint8_t &host)
 {
     host = *b.needle_;
     ++b.needle_;
@@ -98,7 +102,7 @@ bool operator>><uint8_t>(buffer &b, uint8_t &host)
 }
 
 template<>
-buffer& operator<<<uint16_t>(buffer &b, const uint16_t &host)
+buffer& operator<<(buffer &b, const uint16_t &host)
 {
     b.needle_[0] = (uint8_t)((host >> 8) & 0xFF);
     b.needle_[1] = (uint8_t)((host)      & 0xFF);
@@ -107,7 +111,7 @@ buffer& operator<<<uint16_t>(buffer &b, const uint16_t &host)
 }
 
 template<>
-bool operator>><uint16_t>(buffer &b, uint16_t &host)
+bool operator>>(buffer &b, uint16_t &host)
 {
     host = ((uint16_t)b.needle_[0] << 8);
          + ((uint16_t)b.needle_[1]);
@@ -116,7 +120,7 @@ bool operator>><uint16_t>(buffer &b, uint16_t &host)
 }
 
 template<>
-buffer& operator<<<uint32_t>(buffer &b, const uint32_t &host)
+buffer& operator<<(buffer &b, const uint32_t &host)
 {
     b.needle_[0] = (uint8_t)((host >> 24) & 0xFF);
     b.needle_[1] = (uint8_t)((host >> 16) & 0xFF);
@@ -127,7 +131,7 @@ buffer& operator<<<uint32_t>(buffer &b, const uint32_t &host)
 }
 
 template<>
-bool operator>><uint32_t>(buffer &b, uint32_t &host)
+bool operator>>(buffer &b, uint32_t &host)
 {
     host = ((uint32_t)b.needle_[0] << 24);
          + ((uint32_t)b.needle_[1] << 16);
@@ -138,7 +142,7 @@ bool operator>><uint32_t>(buffer &b, uint32_t &host)
 }
 
 template<>
-buffer& operator<<<uint64_t>(buffer &b, const uint64_t &host)
+buffer& operator<<(buffer &b, const uint64_t &host)
 {
     b.needle_[0] = (uint8_t)((host >> 56) & 0xFF);
     b.needle_[1] = (uint8_t)((host >> 48) & 0xFF);
@@ -153,7 +157,7 @@ buffer& operator<<<uint64_t>(buffer &b, const uint64_t &host)
 }
 
 template<>
-bool operator>><uint64_t>(buffer &b, uint64_t &host)
+bool operator>>(buffer &b, uint64_t &host)
 {
     host = ((uint64_t)b.needle_[0] << 56);
          + ((uint64_t)b.needle_[1] << 48);
@@ -181,7 +185,7 @@ bool operator>>(buffer &b, T &host)
 }
 
 template<>
-buffer& operator<<<std::vector<std::string>>(buffer &b, const std::vector<std::string> &host)
+buffer& operator<<(buffer &b, const std::vector<std::string> &host)
 {
     b << static_cast<uint32_t>(host.size());
     for (const auto &s : host)
@@ -190,7 +194,7 @@ buffer& operator<<<std::vector<std::string>>(buffer &b, const std::vector<std::s
 }
 
 template<>
-bool operator>><std::vector<std::string>>(buffer &b, std::vector<std::string> &host)
+bool operator>>(buffer &b, std::vector<std::string> &host)
 {
     uint32_t list_size;
 
@@ -233,12 +237,12 @@ bool operator>>(buffer &b, std::unordered_map<std::string, std::string> &host)
 }
 
 template<typename T, std::size_t N>
-buffer& operator<<(buffer &b, const std::array<T,N> &host)
+bool operator<<(buffer &b, const std::array<T,N> &host)
 {
     static_assert(sizeof(T) == 1, "Expected byte size");
     std::copy(std::begin(host), std::end(host), b.needle_);
     b.needle_ += N;
-    return b;
+    return true;
 }
 
 template<>
