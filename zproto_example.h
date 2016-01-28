@@ -43,6 +43,7 @@
 #include <unordered_map>
 #include <array>
 #include <vector>
+#include <functional>
 #include <iostream>
 
 using frame = zmq::message_t;
@@ -62,7 +63,7 @@ public:
     friend buffer& operator<<(buffer &b, const T &host);
 
     template<typename T>
-    friend buffer& operator<<(buffer &b, const T *host);
+    friend bool operator>>(buffer &b, T &host);
 
 private:
     uint8_t *needle_;
@@ -79,12 +80,21 @@ buffer& operator<<(buffer &b, const T &host)
     return b;
 }
 
+
 template<>
 buffer& operator<<<uint8_t>(buffer &b, const uint8_t &host)
 {
     *b.needle_ = host;
     ++b.needle_;
     return b;
+}
+
+template<>
+bool operator>><uint8_t>(buffer &b, uint8_t &host)
+{
+    host = *b.needle_;
+    ++b.needle_;
+    return true;
 }
 
 template<>
@@ -97,6 +107,15 @@ buffer& operator<<<uint16_t>(buffer &b, const uint16_t &host)
 }
 
 template<>
+bool operator>><uint16_t>(buffer &b, uint16_t &host)
+{
+    host = ((uint16_t)b.needle_[0] << 8);
+         + ((uint16_t)b.needle_[1]);
+    b.needle_ += 2;
+    return true;
+}
+
+template<>
 buffer& operator<<<uint32_t>(buffer &b, const uint32_t &host)
 {
     b.needle_[0] = (uint8_t)((host >> 24) & 0xFF);
@@ -105,6 +124,17 @@ buffer& operator<<<uint32_t>(buffer &b, const uint32_t &host)
     b.needle_[3] = (uint8_t)((host)       & 0xFF);
     b.needle_ += 4;
     return b;
+}
+
+template<>
+bool operator>><uint32_t>(buffer &b, uint32_t &host)
+{
+    host = ((uint32_t)b.needle_[0] << 24);
+         + ((uint32_t)b.needle_[1] << 16);
+         + ((uint32_t)b.needle_[2] <<  8);
+         + ((uint32_t)b.needle_[3]      );
+    b.needle_ += 4;
+    return true;
 }
 
 template<>
@@ -123,12 +153,56 @@ buffer& operator<<<uint64_t>(buffer &b, const uint64_t &host)
 }
 
 template<>
+bool operator>><uint64_t>(buffer &b, uint64_t &host)
+{
+    host = ((uint64_t)b.needle_[0] << 56);
+         + ((uint64_t)b.needle_[1] << 48);
+         + ((uint64_t)b.needle_[2] << 40);
+         + ((uint64_t)b.needle_[3] << 32);
+         + ((uint64_t)b.needle_[4] << 24);
+         + ((uint64_t)b.needle_[5] << 16);
+         + ((uint64_t)b.needle_[6] <<  8);
+         + ((uint64_t)b.needle_[7]      );
+    b.needle_ += 8;
+    return true;
+}
+
+template<typename T>
+bool operator>>(buffer &b, T &host)
+{
+    static_assert(sizeof(typename T::value_type) == 1, "Expected byte size");
+    uint32_t size = 0;
+    bool result = (b >> size);
+    if (result) {
+        std::copy(b.needle_, b.needle_ + size, std::begin(host));
+        b.needle_ + host.size();
+    }
+    return result;
+}
+
+template<>
 buffer& operator<<<std::vector<std::string>>(buffer &b, const std::vector<std::string> &host)
 {
     b << static_cast<uint32_t>(host.size());
     for (const auto &s : host)
         b << s;
     return b;
+}
+
+template<>
+bool operator>><std::vector<std::string>>(buffer &b, std::vector<std::string> &host)
+{
+    uint32_t list_size;
+
+    bool result = (b >> list_size);
+
+    while (list_size-- && result) {
+        std::string s;
+        result = b >> s;
+        host.emplace_back(std::move(s));
+    }
+
+    return result;
 }
 
 template<>
@@ -142,6 +216,20 @@ buffer& operator<<(buffer &b, const std::unordered_map<std::string, std::string>
         b << s.second;
     }
     return b;
+}
+
+template<>
+bool operator>>(buffer &b, std::unordered_map<std::string, std::string> &host)
+{
+    uint32_t hash_size;
+    bool result = (b >> hash_size);
+    while(hash_size-- && result) {
+        //uint8_t key_size;
+        //result = (b >> key_size)
+        //result = (b >> (uint8_t))
+
+    }
+    return result;
 }
 
 template<typename T, std::size_t N>
@@ -163,30 +251,49 @@ buffer& operator<<(buffer &b, const std::array<char,256> &host)
     return b;
 }
 
-template<>
-buffer& operator<<(buffer &b, const char* host)
+template<typename T, std::size_t N>
+buffer& operator>>(buffer &b, const std::array<T,N> &host)
 {
-    std::size_t size = std::strlen(host);
-    b << (uint8_t)size;
-    memcpy(b.needle_, host, size);
-    b.needle_ += size;
+    static_assert(sizeof(T) == 1, "Expected byte size");
+    std::copy(b.needle_, b.needle_ + N, std::begin(host));
+    b.needle_ += N;
     return b;
 }
 
-class OnScopeExit
+template<>
+bool operator>>(buffer &b, std::array<char,256> &host)
+{
+    uint8_t size;
+    bool result = (b >> size);
+    std::copy(b.needle_, b.needle_ + size, std::begin(host));
+    b.needle_ += size;
+    return result;
+}
+
+template<typename F>
+class ScopeExit
 {
 public:
-    OnScopeExit(std::function<void()> f)
-        : f_(f) {}
-
-    ~OnScopeExit() {
-        if (f_)
-            f_();
-    }
-
+    ScopeExit(const F &f) : f_(f) {}
+    ScopeExit(F &&f) : f_(std::move(f)) {}
+    ~ScopeExit() { f_(); }
 private:
-    std::function<void()> f_;
+    void* operator new(size_t) = delete;
+    F f_;
 };
+
+#define CONCATENATE_IMPL(s1, s2) s1##s2
+#define CONCATENATE(s1, s2) CONCATENATE_IMPL(s1, s2)
+#define ANONYMOUS_VARIABLE(str)   CONCATENATE(str, __LINE)
+
+enum class ScopeOnExit {};
+template<typename F>
+ScopeExit<F> operator+(ScopeOnExit, F &&f) {
+    return ScopeExit<F>(std::forward<F>(f));
+}
+
+#define SCOPE_EXIT   auto ANONYMOUS_VARIABLE(scope_exit)   = ScopeOnExit() + [&]()
+
 
 enum MessageId : uint8_t {
     LOG_MESSAGE = 1,
@@ -214,7 +321,7 @@ public:
         return version_;
     }
     // Get const_host
-    const char* const_host() const {
+    const std::array<char, 256> const_host() const {
         return const_host_;
     }
 
@@ -281,7 +388,7 @@ private:
     // Get version
     const uint16_t version_ = 3;
     // Get const_host
-    const char const_host_[256] = u8"some test data";
+    const std::array<char, 256> const_host_ = { u8"some test data" };
 
     uint16_t sequence_;                   //  sequence
     uint8_t level_;                       //  Log severity level
@@ -293,12 +400,12 @@ private:
     std::string data_;                    //  Actual log message
     
     friend frames& operator<<(frames &, const MsgLog &);
-    friend frames& operator>>(frames &, MsgLog &)
+    friend bool operator>>(frames &, MsgLog &);
 };
 
 frames& operator<<(frames &f, const MsgLog &m)
 {
-    size_t frame_size += 2 + 1;        // signature + message id
+    size_t frame_size = 2 + 1;        // signature + message id
     frame_size += 2;            // sequence
     frame_size += 2;            // version
     frame_size += 1;            // level
@@ -307,7 +414,7 @@ frames& operator<<(frames &f, const MsgLog &m)
     frame_size += 2;            // peer
     frame_size += 8;            // time
     frame_size += 1 + std::strlen(m.host_.data()); // host
-    frame_size += 1 + std::strlen(m.const_host_); // const_host
+    frame_size += 1 + std::strlen(m.const_host_.data()); // const_host
     frame_size += 4 + m.data_.size(); // data
 
     frame content(frame_size);
@@ -328,46 +435,43 @@ frames& operator<<(frames &f, const MsgLog &m)
     return f;
 }
 
-frames& operator>>(const frames &f, MsgLog &m)
+bool operator>>(frames &f, MsgLog &m)
 {
-    OnScopeExit(
-        [&m]() {
-            if (!m.is_valid())
-            std::cout << "MsgLog with id: "
-                      << m.id() << "is not valid!";
-    });
-    size_t frame_size += 2 + 1;        // signature + message id
+    bool result = false;
+    SCOPE_EXIT {
+        if (result)
+            std::cout << "MsgLog malformed" << std::endl;
+    };
+    size_t frame_size = 2 + 1;        // signature + message id
     if (f.empty())
-        return;
-    const frame &content = f[0];
+        return false;
+    frame &content = f[0];
     buffer b(content);
     uint16_t signature;
-    b >> signature;
+    result = b >> signature;
     if (signature != (0xAAA0 | 0)) {
         //zsys_warning ("zproto_example: invalid signature");
         //goto malformed;         //  Interrupted
-        return;
+        return false;
     }
     uint8_t id;
     b >> id;
     if (id != m.id()) {
         //log 
-        return;
+        return false;
     }
     b >> m.sequence_;
-    b >> m.version_;
     b >> m.level_;
     b >> m.event_;
     b >> m.node_;
     b >> m.peer_;
     b >> m.time_;
     b >> m.host_;
-    b >> m.const_host_;
     b >> m.data_;
     size_t frame_no = 0;
     size_t msg_no = 0;
     m.set_is_valid(true);
-    return f;
+    return true;
 }
 class MsgStructures
 {
@@ -415,12 +519,12 @@ private:
     std::unordered_map<std::string, std::string> headers_;         //  Other random properties
     
     friend frames& operator<<(frames &, const MsgStructures &);
-    friend frames& operator>>(frames &, MsgStructures &)
+    friend bool operator>>(frames &, MsgStructures &);
 };
 
 frames& operator<<(frames &f, const MsgStructures &m)
 {
-    size_t frame_size += 2 + 1;        // signature + message id
+    size_t frame_size = 2 + 1;        // signature + message id
     frame_size += 2;            // sequence
     frame_size += 4;            // aliases
     for (const auto &s : m.aliases_)
@@ -440,31 +544,30 @@ frames& operator<<(frames &f, const MsgStructures &m)
     return f;
 }
 
-frames& operator>>(const frames &f, MsgStructures &m)
+bool operator>>(frames &f, MsgStructures &m)
 {
-    OnScopeExit(
-        [&m]() {
-            if (!m.is_valid())
-            std::cout << "MsgStructures with id: "
-                      << m.id() << "is not valid!";
-    });
-    size_t frame_size += 2 + 1;        // signature + message id
+    bool result = false;
+    SCOPE_EXIT {
+        if (result)
+            std::cout << "MsgStructures malformed" << std::endl;
+    };
+    size_t frame_size = 2 + 1;        // signature + message id
     if (f.empty())
-        return;
-    const frame &content = f[0];
+        return false;
+    frame &content = f[0];
     buffer b(content);
     uint16_t signature;
-    b >> signature;
+    result = b >> signature;
     if (signature != (0xAAA0 | 0)) {
         //zsys_warning ("zproto_example: invalid signature");
         //goto malformed;         //  Interrupted
-        return;
+        return false;
     }
     uint8_t id;
     b >> id;
     if (id != m.id()) {
         //log 
-        return;
+        return false;
     }
     b >> m.sequence_;
     b >> m.aliases_;
@@ -472,7 +575,7 @@ frames& operator>>(const frames &f, MsgStructures &m)
     size_t frame_no = 0;
     size_t msg_no = 0;
     m.set_is_valid(true);
-    return f;
+    return true;
 }
 class MsgBinary
 {
@@ -546,12 +649,12 @@ private:
     frames content_;                      //  Message to be delivered
     
     friend frames& operator<<(frames &, const MsgBinary &);
-    friend frames& operator>>(frames &, MsgBinary &)
+    friend bool operator>>(frames &, MsgBinary &);
 };
 
 frames& operator<<(frames &f, const MsgBinary &m)
 {
-    size_t frame_size += 2 + 1;        // signature + message id
+    size_t frame_size = 2 + 1;        // signature + message id
     frame_size += 2;            // sequence
     frame_size += 4;            // flags
     frame_size += 4 + m.public_key_.size();  // public_key
@@ -572,31 +675,30 @@ frames& operator<<(frames &f, const MsgBinary &m)
     return f;
 }
 
-frames& operator>>(const frames &f, MsgBinary &m)
+bool operator>>(frames &f, MsgBinary &m)
 {
-    OnScopeExit(
-        [&m]() {
-            if (!m.is_valid())
-            std::cout << "MsgBinary with id: "
-                      << m.id() << "is not valid!";
-    });
-    size_t frame_size += 2 + 1;        // signature + message id
+    bool result = false;
+    SCOPE_EXIT {
+        if (result)
+            std::cout << "MsgBinary malformed" << std::endl;
+    };
+    size_t frame_size = 2 + 1;        // signature + message id
     if (f.empty())
-        return;
-    const frame &content = f[0];
+        return false;
+    frame &content = f[0];
     buffer b(content);
     uint16_t signature;
-    b >> signature;
+    result = b >> signature;
     if (signature != (0xAAA0 | 0)) {
         //zsys_warning ("zproto_example: invalid signature");
         //goto malformed;         //  Interrupted
-        return;
+        return false;
     }
     uint8_t id;
     b >> id;
     if (id != m.id()) {
         //log 
-        return;
+        return false;
     }
     b >> m.sequence_;
     b >> m.flags_;
@@ -609,7 +711,7 @@ frames& operator>>(const frames &f, MsgBinary &m)
     for (size_t msg_no = 0; frame_no < f.size(); ++frame_no, ++msg_no)
         m.content_[msg_no].rebuild(f[frame_no].data(), f[frame_no].size());
     m.set_is_valid(true);
-    return f;
+    return true;
 }
 class MsgTypes
 {
@@ -705,12 +807,12 @@ private:
     std::array<char, 256> supplier_email_;  //  Email address
     
     friend frames& operator<<(frames &, const MsgTypes &);
-    friend frames& operator>>(frames &, MsgTypes &)
+    friend bool operator>>(frames &, MsgTypes &);
 };
 
 frames& operator<<(frames &f, const MsgTypes &m)
 {
-    size_t frame_size += 2 + 1;        // signature + message id
+    size_t frame_size = 2 + 1;        // signature + message id
     frame_size += 2;            // sequence
     frame_size += 1 + std::strlen(m.client_forename_.data()); // client_forename
     frame_size += 1 + std::strlen(m.client_surname_.data()); // client_surname
@@ -738,31 +840,30 @@ frames& operator<<(frames &f, const MsgTypes &m)
     return f;
 }
 
-frames& operator>>(const frames &f, MsgTypes &m)
+bool operator>>(frames &f, MsgTypes &m)
 {
-    OnScopeExit(
-        [&m]() {
-            if (!m.is_valid())
-            std::cout << "MsgTypes with id: "
-                      << m.id() << "is not valid!";
-    });
-    size_t frame_size += 2 + 1;        // signature + message id
+    bool result = false;
+    SCOPE_EXIT {
+        if (result)
+            std::cout << "MsgTypes malformed" << std::endl;
+    };
+    size_t frame_size = 2 + 1;        // signature + message id
     if (f.empty())
-        return;
-    const frame &content = f[0];
+        return false;
+    frame &content = f[0];
     buffer b(content);
     uint16_t signature;
-    b >> signature;
+    result = b >> signature;
     if (signature != (0xAAA0 | 0)) {
         //zsys_warning ("zproto_example: invalid signature");
         //goto malformed;         //  Interrupted
-        return;
+        return false;
     }
     uint8_t id;
     b >> id;
     if (id != m.id()) {
         //log 
-        return;
+        return false;
     }
     b >> m.sequence_;
     b >> m.client_forename_;
@@ -776,7 +877,7 @@ frames& operator>>(const frames &f, MsgTypes &m)
     size_t frame_no = 0;
     size_t msg_no = 0;
     m.set_is_valid(true);
-    return f;
+    return true;
 }
 
 #endif

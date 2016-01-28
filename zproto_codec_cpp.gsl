@@ -36,6 +36,7 @@ set_defaults ()
 #include <unordered_map>
 #include <array>
 #include <vector>
+#include <functional>
 #include <iostream>
 
 using frame = zmq::message_t;
@@ -55,10 +56,7 @@ public:
     friend buffer& operator<<(buffer &b, const T &host);
 
     template<typename T>
-    friend buffer& operator<<(buffer &b, const T *host);
-
-    template<typename T>
-    friend buffer& operator>>(buffer &b, T &host);
+    friend bool operator>>(buffer &b, T &host);
 
 private:
     uint8_t *needle_;
@@ -75,11 +73,6 @@ buffer& operator<<(buffer &b, const T &host)
     return b;
 }
 
-template<typename T>
-buffer& operator>>(buffer &b, T &host)
-{
-    static_assert(sizeof(typename T::value_type) == 1, "Expected byte size");
-}
 
 template<>
 buffer& operator<<<uint8_t>(buffer &b, const uint8_t &host)
@@ -90,11 +83,11 @@ buffer& operator<<<uint8_t>(buffer &b, const uint8_t &host)
 }
 
 template<>
-buffer& operator>><uint8_t>(buffer &b, uint8_t &host)
+bool operator>><uint8_t>(buffer &b, uint8_t &host)
 {
     host = *b.needle_;
     ++b.needle_;
-    return b;
+    return true;
 }
 
 template<>
@@ -107,12 +100,12 @@ buffer& operator<<<uint16_t>(buffer &b, const uint16_t &host)
 }
 
 template<>
-buffer& operator>><uint16_t>(buffer &b, uint16_t &host)
+bool operator>><uint16_t>(buffer &b, uint16_t &host)
 {
-    host = (uint16_t)(b.needle[0] << 8);
-    host |= (uint16_t)(b.needle[1] & 0xFF);
+    host = ((uint16_t)b.needle_[0] << 8);
+         + ((uint16_t)b.needle_[1]);
     b.needle_ += 2;
-    return b;
+    return true;
 }
 
 template<>
@@ -124,6 +117,17 @@ buffer& operator<<<uint32_t>(buffer &b, const uint32_t &host)
     b.needle_[3] = (uint8_t)((host)       & 0xFF);
     b.needle_ += 4;
     return b;
+}
+
+template<>
+bool operator>><uint32_t>(buffer &b, uint32_t &host)
+{
+    host = ((uint32_t)b.needle_[0] << 24);
+         + ((uint32_t)b.needle_[1] << 16);
+         + ((uint32_t)b.needle_[2] <<  8);
+         + ((uint32_t)b.needle_[3]      );
+    b.needle_ += 4;
+    return true;
 }
 
 template<>
@@ -142,12 +146,56 @@ buffer& operator<<<uint64_t>(buffer &b, const uint64_t &host)
 }
 
 template<>
+bool operator>><uint64_t>(buffer &b, uint64_t &host)
+{
+    host = ((uint64_t)b.needle_[0] << 56);
+         + ((uint64_t)b.needle_[1] << 48);
+         + ((uint64_t)b.needle_[2] << 40);
+         + ((uint64_t)b.needle_[3] << 32);
+         + ((uint64_t)b.needle_[4] << 24);
+         + ((uint64_t)b.needle_[5] << 16);
+         + ((uint64_t)b.needle_[6] <<  8);
+         + ((uint64_t)b.needle_[7]      );
+    b.needle_ += 8;
+    return true;
+}
+
+template<typename T>
+bool operator>>(buffer &b, T &host)
+{
+    static_assert(sizeof(typename T::value_type) == 1, "Expected byte size");
+    uint32_t size = 0;
+    bool result = (b >> size);
+    if (result) {
+        std::copy(b.needle_, b.needle_ + size, std::begin(host));
+        b.needle_ + host.size();
+    }
+    return result;
+}
+
+template<>
 buffer& operator<<<std::vector<std::string>>(buffer &b, const std::vector<std::string> &host)
 {
     b << static_cast<uint32_t>(host.size());
     for (const auto &s : host)
         b << s;
     return b;
+}
+
+template<>
+bool operator>><std::vector<std::string>>(buffer &b, std::vector<std::string> &host)
+{
+    uint32_t list_size;
+
+    bool result = (b >> list_size);
+
+    while (list_size-- && result) {
+        std::string s;
+        result = b >> s;
+        host.emplace_back(std::move(s));
+    }
+
+    return result;
 }
 
 template<>
@@ -161,6 +209,20 @@ buffer& operator<<(buffer &b, const std::unordered_map<std::string, std::string>
         b << s.second;
     }
     return b;
+}
+
+template<>
+bool operator>>(buffer &b, std::unordered_map<std::string, std::string> &host)
+{
+    uint32_t hash_size;
+    bool result = (b >> hash_size);
+    while(hash_size-- && result) {
+        //uint8_t key_size;
+        //result = (b >> key_size)
+        //result = (b >> (uint8_t))
+
+    }
+    return result;
 }
 
 template<typename T, std::size_t N>
@@ -182,30 +244,52 @@ buffer& operator<<(buffer &b, const std::array<char,256> &host)
     return b;
 }
 
-template<>
-buffer& operator<<(buffer &b, const char* host)
+template<typename T, std::size_t N>
+buffer& operator>>(buffer &b, const std::array<T,N> &host)
 {
-    std::size_t size = std::strlen(host);
-    b << (uint8_t)size;
-    memcpy(b.needle_, host, size);
-    b.needle_ += size;
+    static_assert(sizeof(T) == 1, "Expected byte size");
+    std::copy(b.needle_, b.needle_ + N, std::begin(host));
+    b.needle_ += N;
     return b;
 }
 
-class OnScopeExit
+template<>
+bool operator>>(buffer &b, std::array<char,256> &host)
+{
+    uint8_t size;
+    bool result = (b >> size);
+    std::copy(b.needle_, b.needle_ + size, std::begin(host));
+    b.needle_ += size;
+    return result;
+}
+
+template<typename F>
+class ScopeExit
 {
 public:
-    OnScopeExit(std::function<void()> f)
-        : f_(f) {}
-
-    ~OnScopeExit() {
-        if (f_)
-            f_();
-    }
-
+    ScopeExit(const F &f) : f_(f) {}
+    ScopeExit(F &&f) : f_(std::move(f)) {}
+    ~ScopeExit() { f_(); }
 private:
-    std::function<void()> f_;
+    void* operator new(size_t) = delete;
+    F f_;
 };
+
+#define CONCATENATE_IMPL(s1, s2) s1##s2
+#define CONCATENATE(s1, s2) CONCATENATE_IMPL(s1, s2)
+#define ANONYMOUS_VARIABLE(str) \
+    CONCATENATE(str, __LINE)
+
+enum class ScopeOnExit {};
+template<typename F>
+ScopeExit<F> operator+(ScopeOnExit, F &&f) {
+    return ScopeExit<F>(std::forward<F>(f));
+}
+
+#define SCOPE_EXIT \
+    auto ANONYMOUS_VARIABLE(scope_exit) \
+    = ScopeOnExit() + [&]()
+
 
 enum MessageId : uint8_t {
 .for class.message
@@ -246,7 +330,7 @@ public:
     }
 .   endif
 .   elsif type = "string"
-    const char* $(name)() const {
+    const std::array<char, 256> $(name)() const {
         return $(name)_;
     }
 .   endif
@@ -359,7 +443,7 @@ private:
     const $(ctype) $(name)_ = $(value);
 .   endif
 .   elsif type = "string"
-    const char $(name)_[256] = u8"$(value)";
+    const std::array<char, 256> $(name)_ = { u8"$(value)" };
 .   endif
 .   endfor
 
@@ -392,23 +476,19 @@ private:
 .   endfor
     
     friend frames& operator<<(frames &, const Msg$(message.name:Pascal) &);
-    friend frames& operator>>(frames &, Msg$(message.name:Pascal) &)
+    friend bool operator>>(frames &, Msg$(message.name:Pascal) &);
 };
 
 frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
 {
-    size_t frame_size += 2 + 1;        // signature + message id
+    size_t frame_size = 2 + 1;        // signature + message id
 .   for message.field
 .   if type = "number"
     frame_size += $(size);      // $(name)
 .   elsif type = "octets"
     frame_size += $(size);      // $(name)
 .   elsif type = "string"
-.   if !defined (field.value)
     frame_size += 1 + std::strlen(m.$(name)_.data()); // $(name)
-.   else
-    frame_size += 1 + std::strlen(m.$(name)_); // $(name)
-.   endif
 .   elsif type = "longstr"
     frame_size += 4 + m.$(name)_.size(); // $(name)
 .   elsif type = "strings"
@@ -456,34 +536,33 @@ frames& operator<<(frames &f, const Msg$(message.name:Pascal) &m)
     return f;
 }
 
-frames& operator>>(const frames &f, Msg$(message.name:Pascal) &m)
+bool operator>>(frames &f, Msg$(message.name:Pascal) &m)
 {
-    OnScopeExit(
-        [&m]() {
-            if (!m.is_valid())
-            std::cout << "Msg$(message.name:Pascal) with id: "
-                      << m.id() << "is not valid!";
-    });
-    size_t frame_size += 2 + 1;        // signature + message id
+    bool result = false;
+    SCOPE_EXIT {
+        if (result)
+            std::cout << "Msg$(message.name:Pascal) malformed" << std::endl;
+    };
+    size_t frame_size = 2 + 1;        // signature + message id
     if (f.empty())
-        return;
-    const frame &content = f[0];
+        return false;
+    frame &content = f[0];
     buffer b(content);
     uint16_t signature;
-    b >> signature;
+    result = b >> signature;
     if (signature != (0xAAA0 | $(class.signature))) {
         //zsys_warning ("$(class.name): invalid signature");
         //goto malformed;         //  Interrupted
-        return;
+        return false;
     }
     uint8_t id;
     b >> id;
     if (id != m.id()) {
         //log 
-        return;
+        return false;
     }
 .   for message.field
-.   if type <> "msg" & type <> "frame"
+.   if type <> "msg" & type <> "frame" & !defined(field.value)
     b >> m.$(name)_;
 .   endif
 .   endfor
@@ -502,7 +581,7 @@ frames& operator>>(const frames &f, Msg$(message.name:Pascal) &m)
 .   endif
 .   endfor
     m.set_is_valid(true);
-    return f;
+    return true;
 }
 .endfor
 
