@@ -10,7 +10,7 @@
 int main()
 {
     MsgLog log;
-    std::cout << log.version() << log.host().data() << log.const_host() << std::endl;
+    std::cout << log.version() << log.host().data() << log.const_host().data() << std::endl;
     frames f;
     f << log;
     return 0;
