@@ -18,5 +18,12 @@ OTHER_FILES += \
 INCLUDEPATH += \
     3rdparty/include
 
-LIBS += \
-    -L$$PWD/3rdparty/lib -lzmq
+LIBS += -L/usr/local/lib
+
+mac {
+    PKG_CONFIG = /usr/local/bin/pkg-config
+    QT_CONFIG -= no-pkg-config
+}
+
+CONFIG += link_pkgconfig
+PKGCONFIG += libzmq
