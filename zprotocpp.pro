@@ -30,6 +30,10 @@ CONFIG += link_pkgconfig
 PKGCONFIG += libzmq
 
 cpp_proto.target = zproto_example.h
-cpp_proto.commands = /usr/local/bin/gsl zproto_example.xml
+cpp_proto.commands = /usr/local/bin/gsl -script:zproto_codec_cpp zproto_example.xml
+cpp_proto.depends = c_proto
 
-QMAKE_EXTRA_TARGETS += cpp_proto
+c_proto.target = czproto_example.h
+c_proto.commands = /usr/local/bin/gsl -script:/usr/local/bin/zproto_codec_c.gsl zproto_example.xml && mv zproto_example.h czproto_example.h
+
+QMAKE_EXTRA_TARGETS += c_proto cpp_proto
