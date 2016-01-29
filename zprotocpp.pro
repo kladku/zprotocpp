@@ -2,6 +2,7 @@ TEMPLATE = app
 CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
+PRE_TARGETDEPS += zproto_example.h
 
 SOURCES += main.cpp \
     zprotocpp.cpp
@@ -27,3 +28,8 @@ mac {
 
 CONFIG += link_pkgconfig
 PKGCONFIG += libzmq
+
+cpp_proto.target = zproto_example.h
+cpp_proto.commands = /usr/local/bin/gsl zproto_example.xml
+
+QMAKE_EXTRA_TARGETS += cpp_proto
