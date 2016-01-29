@@ -261,7 +261,7 @@ bool operator>>(buffer &b, const std::array<T,N> &host)
     static_assert(sizeof(T) == 1, "Expected byte size");
     std::copy(b.needle_, b.needle_ + N, std::begin(host));
     b.needle_ += N;
-    return bool;
+    return true;
 }
 
 template<>
