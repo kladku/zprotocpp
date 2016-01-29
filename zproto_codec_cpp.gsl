@@ -249,16 +249,16 @@ bool operator>><std::unordered_map<std::string, std::string>>(buffer &b, std::un
 
 
 template<typename T, std::size_t N>
-buffer& operator>>(buffer &b, const std::array<T,N> &host)
+bool operator>>(buffer &b, const std::array<T,N> &host)
 {
     static_assert(sizeof(T) == 1, "Expected byte size");
     std::copy(b.needle_, b.needle_ + N, std::begin(host));
     b.needle_ += N;
-    return b;
+    return bool;
 }
 
 template<>
-bool operator>><std::array<char,256>>(buffer &b, std::array<char,256> &host)
+bool operator>>(buffer &b, std::array<char,256> &host)
 {
     uint8_t size;
     bool result = (b >> size);
